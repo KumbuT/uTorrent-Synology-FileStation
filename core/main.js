@@ -172,13 +172,8 @@ let processTorrent = function (torrent, filesList) {
                     require('./mediaInfo.js').getMovieByKeyword(torrent[2])
                         .then((fileName) => {
                             //path.relative(config.watchPath, queue[pos]).replace(/\\/g, '/')
-<<<<<<< HEAD
-                            //let folderName = path.basename(queue[pos], path.extname(queue[pos]));
-                            ds.uploadFile(queue[pos], dsPath + fileName)
-=======
                             let folderName = path.basename(queue[pos], path.extname(queue[pos]));
                             ds.uploadFile(queue[pos], dsPath + folderName + "/" + fileName)
->>>>>>> b2dfd3f58bdc32686cf7da00af7745cf1c511ee4
                                 .then((res) => {
                                     emitEvent('Uploaded file ' + file[0], false);
                                     helper.removeFileAfterUpload(queue[pos]);
