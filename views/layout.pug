@@ -1,0 +1,20 @@
+doctype html
+html(lang="en")
+  head
+    title Syno-UTorrent Interface
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    meta(name='theme-color' content='#4DA5F4')
+    meta(name='csrf-token', content=_csrf)
+    link(rel='stylesheet', href='/stylesheets/bootstrap.min.css')
+    link(rel='stylesheet', href='/stylesheets/bootstrap-table.min.css')
+    link(rel='stylesheet', href='/stylesheets/bootstrap-theme.min.css')
+    link(rel='stylesheet', href='/stylesheets/dashboard.css')
+  body
+    script(src='/scripts/jquery-3.2.1.min.js')
+    script(src='/scripts/bootstrap.min.js')
+    script(src='/scripts/socket.io.js')
+    script(src='/scripts/bootstrap-table.min.js')
+    script(src='/scripts/client-main.js')
+    block content

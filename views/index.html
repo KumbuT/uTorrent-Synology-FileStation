@@ -1,0 +1,86 @@
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false"
+                aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+            <a class="navbar-brand" href="#">Vasishtah Home Automation</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <!--<li><a href="#">Dashboard</a></li>
+                <li><a href="#">Settings</a></li>
+                <li><a href="#">Profile</a></li>-->
+                <li><a href="#">Help</a></li>
+            </ul>
+            <form class="navbar-form navbar-right">
+                <input type="text" class="form-control" placeholder="Search...">
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-3 col-md-2 sidebar">
+            <ul class="nav nav-sidebar">
+                <li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
+                <!-- <li><a href="#">Torrents</a></li>
+                <li><a href="#">Upload Status</a></li> -->
+            </ul>
+        </div>
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+            <h1 class="page-header">Overview</h1>
+            <div class="row bottom-buffer">
+                <div class="col-sm-3">
+                    <div class="card" style="width:20rem">
+                        <div class="card-block">
+                            <h4 class="card-subtitle">uTorrent</h4>
+                            <table id="uTStats" class="table table-striped">
+                                <!--Loaded with JS-->
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="card" style="width:20rem">
+                        <div class="card-block">
+                            <h4 class="card-subtitle">Diskstation</h4>
+                            <table id="dsStats" class="table table-striped">
+                                <!--Loaded with JS-->
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row bottom-buffer">
+                <div class="table-responsive">
+                    <table id="event-table" class="table table-striped">
+                        <!--Loaded with JS-->
+                    </table>
+                </div>
+            </div>
+            <h1 class="page-header">Torrents</h1>
+            <div class="row bottom-buffer">
+                <div class="table-responsive">
+                    <table id="torrent-table" class="table table-striped">
+                        <!--Loaded with JS-->
+                    </table>
+                </div>
+            </div>
+            <h1 class="page-header">Upload Status</h1>
+            <div class="row bottom-buffer">
+                <div class="table-responsive">
+                    <table id="file-table" class="table table-striped">
+                        <!--Loaded with JS-->
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
