@@ -12,40 +12,67 @@ var synoFileStation = {
     "auth": function (method) {
         return new Promise((resolve, reject) => {
             let maxVersion = 1;
-            this.getMaxVersionPromise('SYNO.API.Auth').then(function (data) {
-                maxVersion = data;
-                if (!maxVersion) {
-                    //if an error occurred and false was returned
-                    return reject({ success: false, error: { code: 10000 } });
-                }
-                let opts = {
-                    hostname: config.synology.ipV4.toString(),
-                    port: 5001
-                };
-                switch (method) {
-                    case "login": opts.path = '/webapi/auth.cgi?api=SYNO.API.Auth&version=' + maxVersion + '&method=login&account=' + config.synology.userName + '&passwd=' + config.synology.password + '&session=FileStation&format=cookie'; break;
-                    case "logout": opts.path = '/webapi/auth.cgi?api=SYNO.API.Auth&version=' + maxVersion + '&method=logout&account=' + config.synology.userName + '&passwd=' + config.synology.password + '&session=FileStation&format'; break;
-                    default: reject(JSON.stringify({ success: false, error: { code: 1000 } }));
-                }
-                https.get(opts, (res) => {
-                    if (res.statusCode >= 400) {
-                        reject(res);
+            try {
+                this.getMaxVersionPromise('SYNO.API.Auth').then(function (data) {
+                    maxVersion = data;
+                    if (!maxVersion) {
+                        //if an error occurred and false was returned
+                        return reject({
+                            success: false,
+                            error: {
+                                code: 10000
+                            }
+                        });
                     }
-                    let responseBody = '';
-
-                    res.on('end', () => {
-                        responseBody = JSON.parse(responseBody);
-                        if (responseBody.success) {
-                            this.sid = responseBody.data.sid;
-                            resolve(this.sid);
-                        } else {
-                            reject(responseBody);
+                    let opts = {
+                        hostname: config.synology.ipV4.toString(),
+                        port: 5001
+                    };
+                    switch (method) {
+                        case "login":
+                            opts.path = '/webapi/auth.cgi?api=SYNO.API.Auth&version=' + maxVersion + '&method=login&account=' + config.synology.userName + '&passwd=' + config.synology.password + '&session=FileStation&format=cookie';
+                            break;
+                        case "logout":
+                            opts.path = '/webapi/auth.cgi?api=SYNO.API.Auth&version=' + maxVersion + '&method=logout&account=' + config.synology.userName + '&passwd=' + config.synology.password + '&session=FileStation&format';
+                            break;
+                        default:
+                            reject(JSON.stringify({
+                                success: false,
+                                error: {
+                                    code: 1000
+                                }
+                            }));
+                    }
+                    https.get(opts, (res) => {
+                        if (res.statusCode >= 400) {
+                            reject(res);
                         }
-                    })
-                        .on('data', (data) => responseBody += data.toString())
-                        .on('error', (e) => { reject(e) });
-                });
-            }, (data) => reject({ success: false, error: { code: 1001, message: data } }));
+                        let responseBody = '';
+
+                        res.on('end', () => {
+                                responseBody = JSON.parse(responseBody);
+                                if (responseBody.success) {
+                                    this.sid = responseBody.data.sid;
+                                    resolve(this.sid);
+                                } else {
+                                    reject(responseBody);
+                                }
+                            })
+                            .on('data', (data) => responseBody += data.toString())
+                            .on('error', (e) => {
+                                reject(e)
+                            });
+                    });
+                }, (data) => reject({
+                    success: false,
+                    error: {
+                        code: 1001,
+                        message: data
+                    }
+                }))
+            } catch (err) {
+                reject(err);
+            }
         });
     },
     getSharedFolderList: function (sid) {
@@ -54,7 +81,12 @@ var synoFileStation = {
             let listFolders = function () {
                 if (!maxVersion) {
                     //if an error occurred and false was returned
-                    return reject({ success: false, error: { code: 10000 } });
+                    return reject({
+                        success: false,
+                        error: {
+                            code: 10000
+                        }
+                    });
                 }
                 let opts = {
                     hostname: config.synology.ipV4,
@@ -71,23 +103,28 @@ var synoFileStation = {
                         .on('end', () => {
                             if (JSON.parse(responseBody).success) {
                                 resolve(responseBody);
-                            }
-                            else {
+                            } else {
                                 reject(responseBody);
                             }
                         });
                 });
             }
             if (typeof sid === 'undefined') {
-                this.auth('login').then((sid) => { return this.getMaxVersionPromise('SYNO.FileStation.List') }).then((maxV) => {
+                this.auth('login').then((sid) => {
+                    return this.getMaxVersionPromise('SYNO.FileStation.List')
+                }).then((maxV) => {
                     maxVersion = maxV;
                     listFolders();
-                }).catch((err) => { reject(err); });
+                }).catch((err) => {
+                    reject(err);
+                });
             } else {
                 this.getMaxVersionPromise('SYNO.FileStation.List').then((maxV) => {
                     maxVersion = maxV;
                     listFolders();
-                }).catch((err) => { reject(err); });
+                }).catch((err) => {
+                    reject(err);
+                });
             }
         });
     },
@@ -125,8 +162,7 @@ var synoFileStation = {
                                 res = JSON.parse(res);
                                 if (res.success) {
                                     resolve(res);
-                                }
-                                else {
+                                } else {
                                     reject(res);
                                 }
                             }
@@ -139,16 +175,22 @@ var synoFileStation = {
                 }
             }
             if (typeof sid === 'undefined') {
-                this.auth('login').then((sid) => { return this.getMaxVersionPromise('SYNO.FileStation.Upload'); }).then((maxV) => {
+                this.auth('login').then((sid) => {
+                    return this.getMaxVersionPromise('SYNO.FileStation.Upload');
+                }).then((maxV) => {
                     maxVersion = maxV;
                     processUpload();
-                }).catch((err) => { reject(err); });
+                }).catch((err) => {
+                    reject(err);
+                });
 
             } else {
                 this.getMaxVersionPromise('SYNO.FileStation.Upload').then(function (data) {
                     maxVersion = data;
                     processUpload();
-                }).catch((err) => { reject(err) });
+                }).catch((err) => {
+                    reject(err)
+                });
             }
 
         });
@@ -160,7 +202,7 @@ var synoFileStation = {
                 port: 5001,
                 path: '/webapi/query.cgi?api=SYNO.API.Info&version=1&method=query&query=' + apiName
             };
-            https.get(opts, (res) => {
+            let req = https.get(opts, (res) => {
                 if (res.statusCode >= 400) {
                     reject(`Request to ${res.url} failed with status ${res.statusMessage}`);
                 }
@@ -172,6 +214,8 @@ var synoFileStation = {
                     //console.log(responseBody);
                     resolve(JSON.parse(responseBody).data[apiName].maxVersion)
                 });
+            }).on('error', (err) => {
+                reject(err)
             });
         });
     },
@@ -182,7 +226,12 @@ var synoFileStation = {
             let dirInfo = function () {
                 if (!maxVersion) {
                     //if an error occurred and false was returned
-                    return reject({ success: false, error: { code: 10000 } });
+                    return reject({
+                        success: false,
+                        error: {
+                            code: 10000
+                        }
+                    });
                 }
                 let opts = {
                     hostname: config.synology.ipV4,
@@ -196,8 +245,8 @@ var synoFileStation = {
                     }
                     let responseBody = '';
                     res.on('data', (chunk) => {
-                        responseBody += chunk
-                    })
+                            responseBody += chunk
+                        })
                         .on('end', () => {
                             resolve(responseBody)
                         })

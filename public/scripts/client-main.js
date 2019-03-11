@@ -4,6 +4,7 @@ $().ready(function () {
     loadQueueTable();
     loadFileTable();
     loadEventTable();
+    loadMediaFolderTable();
     loadUtStats();
 });
 
@@ -12,7 +13,30 @@ $().ready(function () {
  */
 
 socket.on('torrentQueue', function (data) {
-    $('#torrent-table').bootstrapTable('load', data);
+    data.map((torrent, index) => {
+        torrent.ETA = new Date(torrent.ETA * 1000).toISOString().substr(11, 8);
+        torrent.UpSpeed = (torrent.UpSpeed / 1000000.0).toFixed(2);
+        torrent.DownSpeed = (torrent.DownSpeed / 1000000.0).toFixed(2);
+    });
+    $('#torrent-table').bootstrapTable('load',data);
+    // console.log(data);
+    // let curData = $('#torrent-table').bootstrapTable('getData', 'useCurrentPage');
+    // if (curData.length == 0 && curData.length !== data.length) {
+    //     $('#torrent-table').bootstrapTable('load', data);
+    // } else {
+    //     console.log(curData);
+    //     data.map((val, index) => {
+    //         $('#torrent-table').bootstrapTable('updateRow', {
+    //             'index': index,
+    //             'row': val
+    //         });
+    //     });
+    // };
+});
+
+socket.on('mediaFolders', function(data){
+    console.log(data);
+    $('#media-folder-table').bootstrapTable('load',data);
 });
 
 socket.on('fileQueue', function (data) {
@@ -27,71 +51,93 @@ socket.on('uTorrentHealth', function (data) {
     $('#uTStats').bootstrapTable('load', data);
 });
 
+let loadMediaFolderTable =  function(){
+    $('#media-folder-table').bootstrapTable({
+        cardView: false,
+        smartDisplay: true,
+        columns: [{
+            field: 'folderName',
+            title: 'Media Folder'
+        }]
+    });
+};
+
 let loadUtStats = function () {
     $('#uTStats').bootstrapTable({
         cardView: true,
         smartDisplay: true,
         columns: [{
             field: 'online',
-            title: 'Online'
+            title: 'Online',
+            checkbox: true
         }]
     });
 };
 let loadQueueTable = function () {
     $('#torrent-table').bootstrapTable({
         cardView: false,
-        showToggle: true,
+        showToggle: false,
         search: true,
         smartDisplay: true,
         columns: [{
-            field: 'QueueOrder',
-            title: '#'
-        },
-        {
-            field: 'Name',
-            title: 'Name'
-        },
-        {
-            field: 'Status',
-            title: 'Status'
-        },
-        {
-            field: 'Hash',
-            title: 'Torrent Hash'
-        },
-        {
-            field: 'ETA',
-            title: 'ETA (s)'
-        },
-        {
-            field: 'DownSpeed',
-            title: 'Download speed (Bps)'
-        },
-        {
-            field: 'UpSpeed',
-            title: 'Upload speed (Bps)'
-        }],
+                field: 'id',
+                title: 'ID'
+            },
+            {
+                field: 'QueueOrder',
+                title: '#'
+            },
+            {
+                field: 'Name',
+                title: 'Name'
+            },
+            {
+                field: 'Status',
+                title: 'Status'
+            },
+            {
+                field: 'Hash',
+                title: 'Torrent Hash'
+            },
+            {
+                field: 'ETA',
+                title: 'ETA (HH:MM:SS)'
+            },
+            {
+                field: 'DownSpeed',
+                title: 'Download speed (Mbps)'
+            },
+            {
+                field: 'UpSpeed',
+                title: 'Upload speed (Mbps)'
+            }
+        ],
         detailView: true,
         onExpandRow: function (index, row, $files) {
             $files.html('<table></table>').find('table').bootstrapTable({
                 columns: [{
-                    field: 'FileName',
-                    title: 'Name'
-                },
-                {
-                    field: 'FileSize',
-                    title: 'Size'
-                },
-                {
-                    field: 'Downloaded',
-                    title: 'Downloaded'
-                },
-                {
-                    field: 'Priority',
-                    title: 'Priority'
-                }],
+                        field: 'id',
+                        title: 'ID'
+                    },
+                    {
+                        field: 'FileName',
+                        title: 'Name'
+                    },
+                    {
+                        field: 'FileSize',
+                        title: 'Size'
+                    },
+                    {
+                        field: 'Downloaded',
+                        title: 'Downloaded'
+                    },
+                    {
+                        field: 'Priority',
+                        title: 'Priority'
+                    }
+                ],
                 data: row.nested
-            });
+            });            
         },
         // data: [{
         //     QueueOrder: '1',
@@ -112,13 +158,14 @@ let loadQueueTable = function () {
 let loadFileTable = function () {
     $('#file-table').bootstrapTable({
         columns: [{
-            field: 'fileName',
-            title: 'File Name'
-        },
-        {
-            field: 'filePath',
-            title: 'Local Path'
-        }]
+                field: 'fileName',
+                title: 'File Name'
+            },
+            {
+                field: 'filePath',
+                title: 'Local Path'
+            }
+        ]
     });
 };
 
@@ -132,20 +179,31 @@ let loadEventTable = function () {
         smartDisplay: true,
         showColumns: true,
         columns: [{
-            field: 'dateTime',
-            title: 'TS',
-            sortable: true,
-            order: 'desc'
-        },
-        {
-            field: 'isError',
-            title: 'Type',
-            searchable: true
-        }, {
-            field: 'message',
-            title: 'Message'
-        }],
+                field: 'dateTime',
+                title: 'TS',
+                sortable: true,
+                order: 'desc'
+            },
+            {
+                field: 'isError',
+                title: 'Type',
+                searchable: true
+            }, {
+                field: 'message',
+                title: 'Message'
+            }
+        ],
         sortName: 'dateTime',
         sortOrder: 'desc'
     });
+};
+
+var compareJSON = function (obj1, obj2) {
+    let ret = {};
+    for (var i in obj2) {
+        if (!obj1.hasOwnProperty(i) || obj2[i] !== obj1[i]) {
+            ret[i] = obj2[i];
+        }
+    }
+    return ret;
 };

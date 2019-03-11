@@ -8,6 +8,30 @@ var uTorrentClient = require('./uTorrent.js');
 var config = require('./config.js');
 var redisDb = require('./cache.js');
 
+/**
+ * Instantiate Logger
+ */
+const logger = winston.createLogger({
+    level: 'debug',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.prettyPrint(),
+        winston.format.splat(),
+        winston.format.printf(info => `[${info.timestamp}] [${info.level}] : ${info.message}`)
+    ),
+    transports: [
+        new winston.transports.File({
+            filename: 'dsFileCopyEventsCombined.log'
+        }),
+        new winston.transports.Console()
+    ],
+    exceptionHandlers: [
+        new winston.transports.File({
+            filename: 'dsFileCopyExceptions.log'
+        })
+    ],
+    exitOnError: true
+});
 let sid;
 let io;
 let myServer;
@@ -15,7 +39,6 @@ let torrentFiles = [];
 let torrentQueue = [];
 let queue = [];
 let myRedisClient;
-let logger;
 
 /**
  * cleanup
@@ -28,9 +51,16 @@ function cleanUp() {
             (err, reply) => {
                 if (err) {
                     console.error(err);
+                    logger.log({
+                        level: 'error',
+                        message: err
+                    });
                     return null;
                 } else {
-                    console.info(`REDIS: Flushed all connections`);
+                    logger.log({
+                        level: 'info',
+                        message: 'REDIS: Flushed all connections',
+                    });
                 }
                 process.exit(2);
             });
@@ -38,25 +68,6 @@ function cleanUp() {
 }
 
 var myCleanUp = require('./cleanUp.js').Cleanup(cleanUp);
-
-/**
- * Instantiate Logger
- */
-logger = new(winston.Logger)({
-    transports: [
-        new(winston.transports.File)({
-            name: 'file-logger',
-            filename: 'syno-ds-xfer.log',
-            level: 'debug'
-        }),
-        new(winston.transports.File)({
-            filename: 'exceptions.log',
-            handleExceptions: true,
-            humanReadableUnhandledException: true
-        }),
-        new(winston.transports.Console)()
-    ]
-});
 
 /**
  * Instantiate REDIS
@@ -68,37 +79,58 @@ redisDb.create().then(
     (client) => {
         myRedisClient = client;
         myRedisClient.flushall((err, reply) => {
-            console.info(`REDIS: Flushed All`);
+            logger.log({
+                level: 'info',
+                message: 'REDIS: Flushed all',
+            });
         });
     }).catch((err) => {
     logger.debug(err);
 });
 
 
+
+/**
+ * Declare media file reader
+ */
+
+let readMediaFolder = () => {
+    fs.readdir(config.mediaFolder, (err, list) => {
+        if (err) {
+            console.debug(err);
+        } //to be implemented 
+        let isDirectory = src => fs.lstatSync(src).isDirectory();
+        list = list.map(name => path.join(config.mediaFolder, name)).filter(isDirectory);
+        emitMediaFolders(list);
+    });
+};
+
 /**
  * Instantiate File Watcher
  */
-
-let watcher = fileWatcher.startWatching();
+let watcher = fileWatcher.startWatching(logger);
 watcher.on("add", filePath => {
-    console.log(`File ${filePath} has been added`);
+    logger.log('info', 'File %s has been added', filePath);
     queue.push(filePath);
     emitEvent(' File ' + path.basename(filePath) + ' added at path ' + filePath, false);
     emitFileQueue();
 }).on('unlink', filePath => {
-    console.log(`File ${filePath} has been deleted`);
+    logger.log('info', 'File %s has been deleted', filePath);
     if (queue.indexOf(filePath) > -1) {
         queue.splice(queue.indexOf(filePath), 1);
         emitEvent('File ' + path.basename(filePath) + ' removed at path ' + filePath, false);
         emitFileQueue();
     }
 }).on('addDir', dirPath => {
-    console.log(`Directory ${dirPath} has been added`);
+    logger.log('info', 'Folder %s has been added', dirPath);
     emitEvent('Directory ' + path.basename(dirPath) + ' added at path ' + dirPath, false);
     emitFileQueue();
 });
 
+
+
 let UTorrentCallback = function () {
+    readMediaFolder();
     uTorrentClient.login().then((token) => {
         emitUtStatus([{
             online: 'Online'
@@ -119,26 +151,26 @@ let UTorrentCallback = function () {
                     }
                     emitTorrentQueue();
                 }, (err) => {
-                    console.log(`uTorrent: An error occurred - ${err}`);
+                    logger.log('error', 'uTorrent: An error occurred - ', err);
                 });
                 if (cur[21].includes('Seeding')) {
                     uTorrentClient.removeTorrent(token, cur[0]).then((res) => {
-                        console.log(`uTorrent:  Successfully removed torrent ${cur[2]}`);
+                        logger.log('info', 'uTorrent:  Successfully removed torrent ', cur[2]);
                         let pos = torrentFiles.map((torrent) => {
                             return torrent.files[0];
                         }).indexOf(cur[0]);
                         processTorrent(cur, torrentFiles[pos]);
                     }, (err) => {
-                        console.error(`uTorrent:  Failed to remove torrent ${cur[2]}`);
+                        logger.log('error', 'uTorrent:  Failed to removed torrent ', cur[2]);
                     });
                 }
             });
         }, (err) => {
-            console.log(`uTorrent could not be reached because ${err.message}`);
+            logger.log('info', 'uTorrent could not be reached because: %s', err);
             emitEvent("uTorrent could not be reached because " + err.message, true);
         });
     }, (err) => {
-        console.error(`uTorrent could not be reached because: ${err}`);
+        logger.log('info', 'uTorrent could not be reached because: %s', err);
         if (err === "uTorrent API returned status code : 400") {
             emitEvent("uTorrent could not be reached because " + err, true);
         }
@@ -147,60 +179,92 @@ let UTorrentCallback = function () {
         }]);
     });
 };
-let torrentCheckerTimer = setInterval(UTorrentCallback, 10000);
+
+
+let torrentCheckerTimer = setInterval(UTorrentCallback, 15000);
 
 /**
- * processing torrent after completion of download
+ * processing torrent after completion of download of a torrent
  */
 let processTorrent = function (torrent, filesList) {
-    ds.auth('login')
-        .then((sid) => {
-            console.log(`Logged into DS with sid ${sid}`);
-            emitEvent('Logged into DS with ID:' + sid, false);
-            filesList.files[1].map((file) => {
-                if (file[3] > 0) {
-                    let dsPath = helper.resolveFileTypeToDsPath(file[0]);
-                    if (typeof dsPath === 'undefined') {
-                        return;
-                    }
-                    let pos = queue.map((filePath) => {
-                        return path.basename(filePath);
-                    }).indexOf(file[0]);
-                    if (pos === -1) {
-                        return;
-                    }
-                    require('./mediaInfo.js').getMovieByKeyword(torrent[2])
-                        .then((fileName) => {
-                            //path.relative(config.watchPath, queue[pos]).replace(/\\/g, '/')
-                            let folderName = path.basename(queue[pos], path.extname(queue[pos]));
-                            ds.uploadFile(queue[pos], dsPath + folderName + "/" + fileName)
-                                .then((res) => {
-                                    emitEvent('Uploaded file ' + file[0], false);
-                                    helper.removeFileAfterUpload(queue[pos]);
-                                }, (err) => {
-                                    console.error(`Failed to upload file: ${file} with message ${JSON.stringify(err)}`);
-                                    emitEvent('Failed to upload file:' + file + 'with message' + JSON.stringify(err), true);
-                                });
-                        }).catch((err) => {
-                            console.error(err);
-                        });
+    try {
+        filesList.files[1].map((file) => {
+            if (file[3] > 0) {
+                let dsPath = helper.resolveFileTypeToDsPath(file[0]);
+                if (typeof dsPath === 'undefined') {
+                    return;
                 }
-            });
-
-        }, (err) => {
-            err = JSON.parse(err);
-            console.error(`Could not login. Error: ${err.error.code} - ${JSON.stringify(err.error)}`);
+                let pos = queue.map((filePath) => {
+                    return path.basename(filePath);
+                }).indexOf(file[0]);
+                if (pos === -1) {
+                    logger.log('error', 'Couldn\'t find file %s in local queue', file[0]);
+                    return;
+                }
+                require('./mediaInfo.js').getMovieByKeyword(torrent[2])
+                    .then((fileName) => {
+                        emitEvent("File name will be " + fileName, false);
+                        logger.log('info', 'File will be named: %s', fileName);
+                        //path.relative(config.watchPath, queue[pos]).replace(/\\/g, '/')
+                        let folderName = path.basename(queue[pos], path.extname(queue[pos]));
+                        ds.uploadFile(queue[pos], dsPath + folderName + "/" + fileName)
+                            .then((res) => {
+                                emitEvent('Uploaded file ' + file[0], false);
+                                logger.log('info', 'Uploaded file %s', file[0]);
+                                helper.removeFileAfterUpload(queue[pos]);
+                            }, (err) => {
+                                logger.log('error', 'Failed to upload file %s with message ', file, err);
+                                logger.log('info', 'Attempting to move file to local DLNA folder');
+                                emitEvent('Failed to upload file:' + file + 'with message' + JSON.stringify(err), true);
+                                emitEvent("Attempting to move file to local DLNA folder", false);
+                                helper.moveFileToDLNAFolder(fileName, queue[pos]);
+                            });
+                    }).catch((err) => {
+                        logger.log('error', err);
+                        throw err;
+                    });
+            }
         });
+    } catch (err) {
+        emitEvent("Unknown Error:" + err);
+        logger.log('error', 'Unknown Error:', err);
+    }
 };
 
 /**
  * All Socket Emit Events to follow
  */
+
+
+let emitMediaFolders = function (mediaFoldersList) {
+
+    let mediaFoldersJSON = [];
+    mediaFoldersList.map((folder) => {
+        mediaFoldersJSON.push({
+            'folderName': folder
+        });
+    });
+
+    if (myRedisClient) {
+        myRedisClient.LPUSH("mediaFolderList", JSON.stringify(mediaFoldersJSON), (err, reply) => {
+            if (err) {
+                console.error(err);
+                logger.log('error', err);
+            } else {
+                logger.log('info', 'Folders saved to DB. Debug %s', mediaFoldersJSON);
+            }
+        });
+    }
+    io.emit('mediaFolders', mediaFoldersJSON);
+};
+
+
 let emitTorrentQueue = function () {
     let data = [];
     try {
         torrentQueue.torrents.map((torrent, index, torrents) => {
             let tmp = {
+                id: index + 1,
                 QueueOrder: torrent[17],
                 Name: torrent[2],
                 Status: helper.resolveStatus(torrent[1]),
@@ -214,8 +278,9 @@ let emitTorrentQueue = function () {
                 return tor.files[0];
             }).indexOf(torrent[0]);
             if (pos > -1) {
-                torrentFiles[pos].files[1].map((file, index, files) => {
+                torrentFiles[pos].files[1].map((file, fileIndex, files) => {
                     let fileTmp = {
+                        id: fileIndex + torrentQueue.torrents.length + 1,
                         FileName: file[0],
                         FileSize: file[1],
                         Downloaded: file[2],
@@ -238,6 +303,7 @@ let emitTorrentQueue = function () {
         io.emit('torrentQueue', data);
     } catch (err) {
         emitEvent(err.toString(), true);
+        logger.log('error', err);
     }
 };
 
@@ -288,11 +354,11 @@ let emitUtStatus = function (data) {
 let replayEvents = (socket, listName, eventName) => {
     myRedisClient.lrange(listName, 0, -1, (err, reply) => {
         if (err) {
-            console.error(err);
+            logger.log('error', err);
         } else {
             var list = reply;
             list.forEach(function (data) {
-                console.info(`Emitting to socket: ${socket.id} -data ${data}`);
+                //console.info(`Emitting to socket: ${socket.id} -data ${data}`);
                 io.sockets.in(socket.id).emit(eventName, JSON.parse(data));
             }, this);
         }
@@ -358,6 +424,39 @@ let helper = {
         }
         return undefined;
     },
+    moveFileToDLNAFolder: function (videoName, srcPath) {
+        let dirPath = 'C://Users//apteja//Videos//' + videoName.replace(/[\\\/*:\?"]/gi, "");
+        let dstPath;
+        if (helper.resolveFileTypeToDsPath == '/video/Movies/') {
+            dstPath = dirPath + "//" + videoName.replace(/[\\\/*:\?"]/gi, "") + path.parse(srcPath).ext;
+        } else {
+            dstPath = dirPath + "//" + path.basename(srcPath).replace(/[\\\/*:\?"]/gi, "");
+        }
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdir(dirPath, (err, folder) => {
+                if (err) {
+                    emitEvent('Failed to create a folder ' + JSON.stringify(err), true);
+                    logger.log('error', 'Failed to create a folder %s because \n', dirPath, err);
+                    throw err;
+                }
+            });
+        }
+        let rs = fs.createReadStream(srcPath);
+        rs.on('error', (err) => {
+            throw err;
+        });
+
+        let ws = fs.createWriteStream(dstPath);
+        ws.on("error", function (err) {
+            throw err;
+        });
+        ws.on("close", function (ex) {
+            emitEvent('Copied file ' + dstPath, false);
+            logger.log('info', 'Moved file %s to DLNA folder', dirPath);
+            helper.removeFileAfterUpload(srcPath);
+        });
+        rs.pipe(ws);
+    },
     removeFileAfterUpload: function (filePath) {
         try {
             fs.unlink(filePath, (err) => {
@@ -365,10 +464,18 @@ let helper = {
                     emitEvent('Unable to remove file ' + path.basename(filePath), true);
                 } else {
                     emitEvent('Removed file' + path.basename(filePath), false);
+                    fs.rmdir(path.parse(filePath).dir, (err) => {
+                        if (err) {
+                            emitEvent("Unable to remove the folder" + path.parse(filePath).dir + " from download location.", true);
+                        } else {
+                            emitEvent('Removed folder ' + path.parse(filePath).dir + " from download location", false);
+                        }
+                    });
                 }
             });
         } catch (err) {
             //log error
+            logger.log('error', err);
         }
     }
 };
@@ -380,5 +487,6 @@ module.exports.setIo = function (socket) {
         replayEvents(socket, "eventList", "hearYe");
         replayEvents(socket, "torrentList", "torrentQueue");
         replayEvents(socket, "fileList", "fileQueue");
+        replayEvents(socket, 'mediaFolderList', 'mediaFolders');
     });
 };

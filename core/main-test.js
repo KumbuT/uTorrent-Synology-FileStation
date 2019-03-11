@@ -4,6 +4,7 @@ var config = require('./config.js');
 var netScan = require('./networkScanner.js');
 var cache = require('./cache.js');
 var movieInfo = require('./mediaInfo.js');
+var socket_io = require('socket.io');
 
 /**
  * Redis test
@@ -128,3 +129,24 @@ uTorrentClient.login().then((token)=>{
 // }).catch((err) => {
 //     console.log(err);
 // });
+
+
+let mediainfo = require('./core/mediaInfo.js');
+try {
+    console.log(process.argv[2]);
+    mediainfo.getMovieByKeyword(process.argv[2]).then((fileName) => {
+        console.log(fileName);
+    }).catch((err) => {
+        console.error(err);
+    });
+
+} catch (e) {
+    console.error(e);
+}
+
+
+setInterval(emitTorrentQueue, 5000);
+
+let emitTorrentQueue = function(){
+    socket.emit(torrentQueue, '')
+};

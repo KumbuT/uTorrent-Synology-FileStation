@@ -1,15 +1,27 @@
 var config = require('./config.js');
 var http = require("https");
+var ptt = require("parse-torrent-title");
 
 var movieInfo = {
-    getMovieByKeyword: (keyword) => {
+    getMovieByKeyword: (torrentName) => {
         return new Promise((resolve, reject) => {
-            keyword = keyword.replace(/[^a-zA-Z]/g, " ");
+            let year = 0;
+            let yearMatches = torrentName.match(/[0-9]{4}/g);
+            if (yearMatches === null || yearMatches.length === 0) {
+                //do nothing
+            } else {
+                yearMatches.forEach(element => {
+                    if (parseInt(element) > 1900) {
+                        year = element;
+                    }
+                });
+            }
+            let torrentData = ptt.parse(torrentName);
             let options = {
                 "method": "GET",
                 "hostname": config.tmdb.hostName,
                 "port": null,
-                "path": encodeURI("/3/search/movie?include_adult=false&page=1&query=" + keyword + "&language=en-US&api_key=" + config.tmdb.apiKey),
+                "path": encodeURI("/3/search/movie?include_adult=false&page=1&query=" + torrentData.title + "&language=en-US&year=" + ((year > 0) ? year : '') + "&api_key=" + config.tmdb.apiKey),
                 "headers": {}
             };
             var req = http.request(options, function (res) {
@@ -26,10 +38,10 @@ var movieInfo = {
                     if (responseBody.results.length > 0) {
                         let originalTitle = responseBody.results[0].original_title;
                         let year = responseBody.results[0].release_date.toString().match(/\d{4}/);
-                        movieFileName = originalTitle + "[" + year + "]";
+                        movieFileName = (originalTitle + "[" + year + "]" + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimRight();
                         resolve(movieFileName);
                     } else {
-                        resolve(keyword);
+                        resolve(torrentName);
                     }
 
                 });
