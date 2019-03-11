@@ -69,7 +69,6 @@ let loadUtStats = function () {
         columns: [{
             field: 'online',
             title: 'Online',
-            checkbox: true
         }]
     });
 };
