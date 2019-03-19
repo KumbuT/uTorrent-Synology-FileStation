@@ -18,25 +18,26 @@ socket.on('torrentQueue', function (data) {
         torrent.UpSpeed = (torrent.UpSpeed / 1000000.0).toFixed(2);
         torrent.DownSpeed = (torrent.DownSpeed / 1000000.0).toFixed(2);
     });
-    $('#torrent-table').bootstrapTable('load',data);
+    $('#torrent-table').bootstrapTable('load', data);
+
     // console.log(data);
-    // let curData = $('#torrent-table').bootstrapTable('getData', 'useCurrentPage');
-    // if (curData.length == 0 && curData.length !== data.length) {
-    //     $('#torrent-table').bootstrapTable('load', data);
-    // } else {
-    //     console.log(curData);
-    //     data.map((val, index) => {
-    //         $('#torrent-table').bootstrapTable('updateRow', {
-    //             'index': index,
-    //             'row': val
-    //         });
-    //     });
-    // };
+    let curData = $('#torrent-table').bootstrapTable('getData', 'useCurrentPage');
+    if (curData.length == 0 && curData.length !== data.length) {
+        $('#torrent-table').bootstrapTable('load', data);
+    } else {
+        console.log(curData);
+        data.map((val, index) => {
+            $('#torrent-table').bootstrapTable('updateRow', {
+                'index': index,
+                'row': val
+            });
+        });
+    };
 });
 
-socket.on('mediaFolders', function(data){
-    console.log(data);
-    $('#media-folder-table').bootstrapTable('load',data);
+socket.on('mediaFolders', function (data) {
+    //console.log(data);
+    $('#media-folder-table').bootstrapTable('load', data);
 });
 
 socket.on('fileQueue', function (data) {
@@ -51,13 +52,62 @@ socket.on('uTorrentHealth', function (data) {
     $('#uTStats').bootstrapTable('load', data);
 });
 
-let loadMediaFolderTable =  function(){
+function responseHandler(res) {
+    $.each(res.rows, function (i, row) {
+        row.state = $.inArray(row.id, selections) !== -1
+    })
+    return res
+}
+
+function operateFormatter(value, row, index) {
+    return [
+        '<a class="remove" href="javascript:void(0)" title="Remove">',
+        '<i class="fa fa-trash"></i>',
+        '</a>'
+    ].join('')
+}
+
+window.operateEvents = {
+    'click .remove': function (e, value, row, index) {
+        console.log(JSON.stringify(row));
+        emitDeleteFolderEvent(row);
+    }
+}
+let emitDeleteFolderEvent = function (data) {
+    socket.emit('delete-folder', JSON.stringify(data));
+};
+
+socket.on('delete-folder', function (data) {
+    console.log('received data' + data);
+})
+socket.on('updateMediaFolderList', (row) => {
+    console.log('Response for update media folders list received');
+    row = JSON.parse(row);
+    $('#media-folder-table').bootstrapTable('remove', {
+        field: 'id',
+        values: [row.id]
+    });
+
+});
+let loadMediaFolderTable = function () {
     $('#media-folder-table').bootstrapTable({
         cardView: false,
         smartDisplay: true,
         columns: [{
+            field: 'state',
+            checkbox: true
+        }, {
+            field: 'id',
+            title: 'ID'
+        }, {
             field: 'folderName',
             title: 'Media Folder'
+        }, {
+            field: 'operate',
+            title: 'Delete',
+            align: 'center',
+            events: window.operateEvents,
+            formatter: operateFormatter
         }]
     });
 };
@@ -136,7 +186,7 @@ let loadQueueTable = function () {
                     }
                 ],
                 data: row.nested
-            });            
+            });
         },
         // data: [{
         //     QueueOrder: '1',

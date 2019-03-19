@@ -1,4 +1,3 @@
-var https = require('https');
 var path = require('path');
 var fs = require('fs');
 var winston = require('winston');
@@ -32,9 +31,7 @@ const logger = winston.createLogger({
     ],
     exitOnError: true
 });
-let sid;
 let io;
-let myServer;
 let torrentFiles = [];
 let torrentQueue = [];
 let queue = [];
@@ -101,7 +98,8 @@ let readMediaFolder = () => {
         } //to be implemented 
         let isDirectory = src => fs.lstatSync(src).isDirectory();
         list = list.map(name => path.join(config.mediaFolder, name)).filter(isDirectory);
-        emitMediaFolders(list);
+        let tmpList = list.filter(x => !config.excludedMediaFolders.map(y=> y.toLowerCase()).includes(x.toLowerCase()));
+        emitMediaFolders(tmpList);
     });
 };
 
@@ -239,8 +237,9 @@ let processTorrent = function (torrent, filesList) {
 let emitMediaFolders = function (mediaFoldersList) {
 
     let mediaFoldersJSON = [];
-    mediaFoldersList.map((folder) => {
+    mediaFoldersList.map((folder, i) => {
         mediaFoldersJSON.push({
+            'id': i + 1,
             'folderName': folder
         });
     });
@@ -251,7 +250,7 @@ let emitMediaFolders = function (mediaFoldersList) {
                 console.error(err);
                 logger.log('error', err);
             } else {
-                logger.log('info', 'Folders saved to DB. Debug %s', mediaFoldersJSON);
+                // logger.log('info', 'Folders saved to DB. Debug %s', mediaFoldersJSON);
             }
         });
     }
@@ -364,6 +363,11 @@ let replayEvents = (socket, listName, eventName) => {
         }
     });
 };
+
+
+
+
+
 /**
  * Helper functions
  */
@@ -480,13 +484,47 @@ let helper = {
     }
 };
 
-module.exports.setIo = function (socket) {
-    io = socket;
+module.exports.setIo = function (mySocket) {
+    io = mySocket;
     io.on("connection", function (socket) {
         console.info(`A user connected: ${socket.client.id}`);
         replayEvents(socket, "eventList", "hearYe");
         replayEvents(socket, "torrentList", "torrentQueue");
         replayEvents(socket, "fileList", "fileQueue");
         replayEvents(socket, 'mediaFolderList', 'mediaFolders');
+        socket.on("delete-folder", function (rowObject) {
+            //delete the folder and it's contents
+            let row = JSON.parse(rowObject);
+            let directory = row.folderName;
+            try {
+                fs.readdir(directory, (err, files) => {
+                    if (err) {
+                        emitEvent(err.toString(), true);
+                        return;
+                    }
+                    for (file of files) {
+                        if (fs.lstatSync(path.join(directory, file)).isDirectory()) {
+                            continue;
+                        };
+                        fs.unlinkSync(path.join(directory, file));
+                    }
+
+                    fs.rmdir(directory, (err) => {
+                        if (err) {
+                            emitEvent(err.toString(), true);
+                            return;
+                        }
+                        //tell all other clients to remove the directory
+                        io.emit('updateMediaFolderList', rowObject);
+                    });
+
+                });
+            } catch (err) {
+                logger.log('error', err);
+            }
+
+        });
     });
+
+
 };
