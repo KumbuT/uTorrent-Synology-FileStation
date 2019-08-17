@@ -98,7 +98,7 @@ let readMediaFolder = () => {
         } //to be implemented 
         let isDirectory = src => fs.lstatSync(src).isDirectory();
         list = list.map(name => path.join(config.mediaFolder, name)).filter(isDirectory);
-        let tmpList = list.filter(x => !config.excludedMediaFolders.map(y=> y.toLowerCase()).includes(x.toLowerCase()));
+        let tmpList = list.filter(x => !config.excludedMediaFolders.map(y => y.toLowerCase()).includes(x.toLowerCase()));
         emitMediaFolders(tmpList);
     });
 };
@@ -219,7 +219,7 @@ let processTorrent = function (torrent, filesList) {
                             });
                     }).catch((err) => {
                         logger.log('error', err);
-                        throw err;
+                        emitEvent('Error' + err);
                     });
             }
         });
@@ -279,7 +279,7 @@ let emitTorrentQueue = function () {
             if (pos > -1) {
                 torrentFiles[pos].files[1].map((file, fileIndex, files) => {
                     let fileTmp = {
-                        id: fileIndex + torrentQueue.torrents.length + 1,
+                        id: torrentQueue.torrents.length + "." + (fileIndex + 1),
                         FileName: file[0],
                         FileSize: file[1],
                         Downloaded: file[2],
@@ -428,10 +428,10 @@ let helper = {
         }
         return undefined;
     },
-    moveFileToDLNAFolder: function (videoName, srcPath) {
+     moveFileToDLNAFolder: function (videoName, srcPath) {
         let dirPath = 'C://Users//apteja//Videos//' + videoName.replace(/[\\\/*:\?"]/gi, "");
         let dstPath;
-        if (helper.resolveFileTypeToDsPath == '/video/Movies/') {
+        if (helper.resolveFileTypeToDsPath(srcPath) == '/video/Movies/') {
             dstPath = dirPath + "//" + videoName.replace(/[\\\/*:\?"]/gi, "") + path.parse(srcPath).ext;
         } else {
             dstPath = dirPath + "//" + path.basename(srcPath).replace(/[\\\/*:\?"]/gi, "");
@@ -467,7 +467,7 @@ let helper = {
                 if (err) {
                     emitEvent('Unable to remove file ' + path.basename(filePath), true);
                 } else {
-                    emitEvent('Removed file' + path.basename(filePath), false);
+                    emitEvent('Removed file ' + path.basename(filePath), false);
                     fs.rmdir(path.parse(filePath).dir, (err) => {
                         if (err) {
                             emitEvent("Unable to remove the folder" + path.parse(filePath).dir + " from download location.", true);

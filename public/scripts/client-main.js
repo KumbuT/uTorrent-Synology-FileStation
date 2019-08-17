@@ -17,22 +17,38 @@ socket.on('torrentQueue', function (data) {
         torrent.ETA = new Date(torrent.ETA * 1000).toISOString().substr(11, 8);
         torrent.UpSpeed = (torrent.UpSpeed / 1000000.0).toFixed(2);
         torrent.DownSpeed = (torrent.DownSpeed / 1000000.0).toFixed(2);
-    });
-    $('#torrent-table').bootstrapTable('load', data);
+        torrent.nested.map((file) => {
+            switch (file.Priority) {
+                case 0:
+                    file.Priority = 'No';
+                    break;
+                case 2:
+                    file.Priority = 'Yes';
+                    break;
+                default:
+                    file.Priority = 'N/A'
+            };
 
-    // console.log(data);
-    let curData = $('#torrent-table').bootstrapTable('getData', 'useCurrentPage');
-    if (curData.length == 0 && curData.length !== data.length) {
-        $('#torrent-table').bootstrapTable('load', data);
-    } else {
-        console.log(curData);
-        data.map((val, index) => {
-            $('#torrent-table').bootstrapTable('updateRow', {
-                'index': index,
-                'row': val
-            });
+            file.Downloaded = file.Downloaded + "(" + ((file.Downloaded / file.FileSize) * 100).toFixed(2) + '%)';
         });
-    };
+        //add new torrents
+        data.filter(torrent => !$('#torrent-table').bootstrapTable('getData').map(row => {
+            return row.Hash;
+        }).includes(torrent.Hash)).map(torrent => $('#torrent-table').bootstrapTable('append', torrent))
+
+        //remove deleted or completed torrents
+        $('#torrent-table').bootstrapTable('getData').filter(torrent => !data.map(row => {
+            return row.Hash;
+        }).includes(torrent.Hash)).map(torrent => {
+            $('#torrent-table').bootstrapTable('removeByUniqueId', torrent.id)
+        });
+
+        //update existing torrents
+        $('#torrent-table').bootstrapTable('updateByUniqueId', {
+            id: torrent.id,
+            row: torrent
+        });
+    });
 });
 
 socket.on('mediaFolders', function (data) {
@@ -52,12 +68,12 @@ socket.on('uTorrentHealth', function (data) {
     $('#uTStats').bootstrapTable('load', data);
 });
 
-function responseHandler(res) {
-    $.each(res.rows, function (i, row) {
-        row.state = $.inArray(row.id, selections) !== -1
-    })
-    return res
-}
+// function responseHandler(res) {
+//     $.each(res.rows, function (i, row) {
+//         row.state = $.inArray(row.id, selections) !== -1
+//     })
+//     return res
+// }
 
 function operateFormatter(value, row, index) {
     return [
@@ -69,7 +85,6 @@ function operateFormatter(value, row, index) {
 
 window.operateEvents = {
     'click .remove': function (e, value, row, index) {
-        console.log(JSON.stringify(row));
         emitDeleteFolderEvent(row);
     }
 }
@@ -94,9 +109,6 @@ let loadMediaFolderTable = function () {
         cardView: false,
         smartDisplay: true,
         columns: [{
-            field: 'state',
-            checkbox: true
-        }, {
             field: 'id',
             title: 'ID'
         }, {
@@ -128,13 +140,15 @@ let loadQueueTable = function () {
         showToggle: false,
         search: true,
         smartDisplay: true,
+        uniqueId: 'id',
+        //reInit: false,
         columns: [{
                 field: 'id',
                 title: 'ID'
             },
             {
                 field: 'QueueOrder',
-                title: '#'
+                title: 'Queue Order'
             },
             {
                 field: 'Name',
@@ -154,11 +168,11 @@ let loadQueueTable = function () {
             },
             {
                 field: 'DownSpeed',
-                title: 'Download speed (Mbps)'
+                title: 'Download(Mbps)'
             },
             {
                 field: 'UpSpeed',
-                title: 'Upload speed (Mbps)'
+                title: 'Upload(Mbps)'
             }
         ],
         detailView: true,
@@ -182,7 +196,7 @@ let loadQueueTable = function () {
                     },
                     {
                         field: 'Priority',
-                        title: 'Priority'
+                        title: 'Is Downloading?'
                     }
                 ],
                 data: row.nested
@@ -202,6 +216,7 @@ let loadQueueTable = function () {
         //     }]
         // }]
     });
+    console.log($('#torrent-table').bootstrapTable('getOptions'));
 };
 
 let loadFileTable = function () {
