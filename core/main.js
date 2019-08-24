@@ -179,7 +179,7 @@ let UTorrentCallback = function () {
 };
 
 
-let torrentCheckerTimer = setInterval(UTorrentCallback, 15000);
+let torrentCheckerTimer = setInterval(UTorrentCallback, 1000);
 
 /**
  * processing torrent after completion of download of a torrent
