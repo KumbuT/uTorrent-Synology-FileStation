@@ -12,6 +12,12 @@ $().ready(function () {
  * All socket opertions
  */
 
+socket.on('connect_error', function (error) {
+    console.log(error);
+    socket.close();
+    socket.open();
+});
+
 socket.on('torrentQueue', function (data) {
     data.map((torrent, index) => {
         torrent.ETA = new Date(torrent.ETA * 1000).toISOString().substr(11, 8);
@@ -85,16 +91,21 @@ function operateFormatter(value, row, index) {
 
 window.operateEvents = {
     'click .remove': function (e, value, row, index) {
-        emitDeleteFolderEvent(row);
+        let deleteConsent = confirm("Are you sure you want to delete?" + JSON.stringify($('#media-folder-table').bootstrapTable('getRowByUniqueId', index)));
+        if (deleteConsent) {
+            emitDeleteFolderEvent(row);
+        }
     }
 }
 let emitDeleteFolderEvent = function (data) {
-    socket.emit('delete-folder', JSON.stringify(data));
+    socket.emit('delete-folder', JSON.stringify(data));7
 };
 
 socket.on('delete-folder', function (data) {
     console.log('received data' + data);
 })
+
+
 socket.on('updateMediaFolderList', (row) => {
     console.log('Response for update media folders list received');
     row = JSON.parse(row);
@@ -102,7 +113,6 @@ socket.on('updateMediaFolderList', (row) => {
         field: 'id',
         values: [row.id]
     });
-
 });
 let loadMediaFolderTable = function () {
     $('#media-folder-table').bootstrapTable({
