@@ -6,6 +6,7 @@ var ds = require('./synoFileStation.js');
 var uTorrentClient = require('./uTorrent.js');
 var config = require('./config.js');
 var redisDb = require('./cache.js');
+var FTP = require('./ftpClient.js');
 
 /**
  * Instantiate Logger
@@ -20,17 +21,31 @@ const logger = winston.createLogger({
     ),
     transports: [
         new winston.transports.File({
-            filename: 'dsFileCopyEventsCombined.log'
+            filename: 'dsFileCopyEventsCombined.log',
+            dailyRotateFile: {
+                colorize: 'true',
+                filename: 'dsFileCopyEventsCombined.log',
+                datePattern: '.yyyy-MM-dd',
+                maxsize: 20000
+            }
         }),
         new winston.transports.Console()
     ],
     exceptionHandlers: [
         new winston.transports.File({
-            filename: 'dsFileCopyExceptions.log'
+            filename: 'dsFileCopyExceptions.log',
+            dailyRotateFile: {
+                colorize: 'true',
+                filename: 'dsFileCopyExceptions.log',
+                datePattern: '.yyyy-MM-dd',
+                maxsize: 20000
+            }
         })
     ],
     exitOnError: true
 });
+
+
 let io;
 let torrentFiles = [];
 let torrentQueue = [];
@@ -99,14 +114,19 @@ let readMediaFolder = () => {
         let isDirectory = src => fs.lstatSync(src).isDirectory();
         list = list.map(name => path.join(config.mediaFolder, name)).filter(isDirectory);
         let tmpList = list.filter(x => !config.excludedMediaFolders.map(y => y.toLowerCase()).includes(x.toLowerCase()));
-        emitMediaFolders(tmpList);
+        if (tmpList.length > 0) {
+            emitMediaFolders(tmpList);
+        }
     });
 };
+
+// Init Call
+readMediaFolder();
 
 /**
  * Instantiate File Watcher
  */
-let watcher = fileWatcher.startWatching(logger);
+let watcher = fileWatcher.startWatching(logger, config.watchPath);
 watcher.on("add", filePath => {
     logger.log('info', 'File %s has been added', filePath);
     queue.push(filePath);
@@ -125,10 +145,29 @@ watcher.on("add", filePath => {
     emitFileQueue();
 });
 
+/**
+ * Media Folder Watcher
+ */
+
+let mediaFolderWatcher = fileWatcher.startWatching(logger, config.mediaFolder);
+
+mediaFolderWatcher.on("add", filePath => {
+    logger.log('info', 'File %s has been added', filePath);
+    readMediaFolder();
+}).on('unlink', filePath => {
+    logger.log('info', 'File %s has been deleted', filePath);
+    readMediaFolder();
+}).on('addDir', dirPath => {
+    logger.log('info', 'Folder %s has been added', dirPath);
+    readMediaFolder();
+}).on('unlinkDir', folderPath => {
+    logger.log('info', 'Folder %s has been deleted', folderPath);
+    readMediaFolder();
+});
+
 
 
 let UTorrentCallback = function () {
-    readMediaFolder();
     uTorrentClient.login().then((token) => {
         emitUtStatus([{
             online: 'Online'
@@ -204,18 +243,28 @@ let processTorrent = function (torrent, filesList) {
                         emitEvent("File name will be " + fileName, false);
                         logger.log('info', 'File will be named: %s', fileName);
                         //path.relative(config.watchPath, queue[pos]).replace(/\\/g, '/')
-                        let folderName = path.basename(queue[pos], path.extname(queue[pos]));
-                        ds.uploadFile(queue[pos], dsPath + folderName + "/" + fileName)
+                        let folderName = fileName; //path.basename(queue[pos], path.extname(queue[pos]));
+                        fileName = fileName + path.extname(queue[pos]); 
+                        ds.uploadFile(queue[pos], dsPath + folderName + "/" + fileName, logger)
                             .then((res) => {
                                 emitEvent('Uploaded file ' + file[0], false);
                                 logger.log('info', 'Uploaded file %s', file[0]);
                                 helper.removeFileAfterUpload(queue[pos]);
                             }, (err) => {
                                 logger.log('error', 'Failed to upload file %s with message ', file, err);
-                                logger.log('info', 'Attempting to move file to local DLNA folder');
                                 emitEvent('Failed to upload file:' + file + 'with message' + JSON.stringify(err), true);
-                                emitEvent("Attempting to move file to local DLNA folder", false);
-                                helper.moveFileToDLNAFolder(fileName, queue[pos]);
+                                emitEvent(`Attempting to FTP upload file: ${file}`);
+                                helper.ftpFileUpload(queue[pos], dsPath + folderName + "/" + fileName, logger).then(() => {
+                                    logger.log('info', `FTP: Uploaded file ${path.basename(queue[pos])}`);
+                                    emitEvent('FTP: Uploaded file ' + path.basename(queue[pos]), false);
+                                }).catch((err) => {
+                                    logger.log('error', `FTP: ${err.toString()}`);
+                                    emitEvent("Attempting to move file to local DLNA folder", false);
+                                    helper.moveFileToDLNAFolder(fileName, queue[pos]);
+                                })
+                            }).catch((err) => {
+                                logger.log('error', err.toString());
+                                throw err;
                             });
                     }).catch((err) => {
                         logger.log('error', err);
@@ -235,7 +284,6 @@ let processTorrent = function (torrent, filesList) {
 
 
 let emitMediaFolders = function (mediaFoldersList) {
-
     let mediaFoldersJSON = [];
     mediaFoldersList.map((folder, i) => {
         mediaFoldersJSON.push({
@@ -243,17 +291,6 @@ let emitMediaFolders = function (mediaFoldersList) {
             'folderName': folder
         });
     });
-
-    if (myRedisClient) {
-        myRedisClient.LPUSH("mediaFolderList", JSON.stringify(mediaFoldersJSON), (err, reply) => {
-            if (err) {
-                console.error(err);
-                logger.log('error', err);
-            } else {
-                // logger.log('info', 'Folders saved to DB. Debug %s', mediaFoldersJSON);
-            }
-        });
-    }
     io.emit('mediaFolders', mediaFoldersJSON);
 };
 
@@ -291,13 +328,21 @@ let emitTorrentQueue = function () {
             data.push(tmp);
         });
         if (myRedisClient) {
-            myRedisClient.LPUSH("torrentList", JSON.stringify(data), (err, reply) => {
+            myRedisClient.DEL("torrentList", (err, reply) => {
                 if (err) {
-                    console.error(err);
+                    logger.log('error', err.toString());
                 } else {
-                    //do nothing
+                    //logger.log('info', reply.toString());
+                    myRedisClient.LPUSH("torrentList", JSON.stringify(data), (err, reply) => {
+                        if (err) {
+                            console.error(err);
+                        } else {
+                            //do nothing
+                        }
+                    });
                 }
             });
+
         }
         io.emit('torrentQueue', data);
     } catch (err) {
@@ -356,10 +401,17 @@ let replayEvents = (socket, listName, eventName) => {
             logger.log('error', err);
         } else {
             var list = reply;
+            // if (reply.length > 20) {
+            //     for (i = 0; i < 20; i++) {
+            //         io.sockets.in(socket.id).emit(eventName, JSON.parse(list[list.length - i + 1]));
+            //     }
+            // } else {
+            console.log(list);
             list.forEach(function (data) {
                 //console.info(`Emitting to socket: ${socket.id} -data ${data}`);
                 io.sockets.in(socket.id).emit(eventName, JSON.parse(data));
             }, this);
+            // }
         }
     });
 };
@@ -428,7 +480,14 @@ let helper = {
         }
         return undefined;
     },
-     moveFileToDLNAFolder: function (videoName, srcPath) {
+    ftpFileUpload: function (file, destPath, logger) {
+        return FTP.upload(logger, {
+            'filePath': file,
+            'destPath': destPath
+        });
+
+    },
+    moveFileToDLNAFolder: function (videoName, srcPath) {
         let dirPath = 'C://Users//apteja//Videos//' + videoName.replace(/[\\\/*:\?"]/gi, "");
         let dstPath;
         if (helper.resolveFileTypeToDsPath(srcPath) == '/video/Movies/') {
@@ -491,7 +550,7 @@ module.exports.setIo = function (mySocket) {
         replayEvents(socket, "eventList", "hearYe");
         replayEvents(socket, "torrentList", "torrentQueue");
         replayEvents(socket, "fileList", "fileQueue");
-        replayEvents(socket, 'mediaFolderList', 'mediaFolders');
+        readMediaFolder()
         socket.on("delete-folder", function (rowObject) {
             //delete the folder and it's contents
             let row = JSON.parse(rowObject);

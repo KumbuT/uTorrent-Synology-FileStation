@@ -3,3 +3,6 @@ config.js
 node_modules
 *.log
 *.bat
+.vscode/launch.json
+.gitignore
+core/main-test.js

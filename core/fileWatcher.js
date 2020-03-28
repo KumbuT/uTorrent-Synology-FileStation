@@ -7,8 +7,8 @@ var config = require('./config.js');
 var fileArray = [];
 
 var filePurge = {
-    startWatching: function (logger) {
-        var watcher = chokidar.watch(config.watchPath, {
+    startWatching: function (logger,watchPath) {
+        var watcher = chokidar.watch(watchPath, {
             usePolling: false,
             ignoreInitial: true,
             depth: 2,
@@ -16,8 +16,8 @@ var filePurge = {
             ignorePermissionErrors: true,
             atomic: true
         });
-        console.log('Started Watching Folder ' + config.watchPath);
-        logger.log('info', 'Started Watching Folder %s', config.watchPath);
+        console.log('Started Watching Folder ' + watchPath);
+        logger.log('info', 'Started Watching Folder %s', watchPath);
         return watcher;
     }
 };

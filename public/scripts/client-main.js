@@ -58,7 +58,7 @@ socket.on('torrentQueue', function (data) {
 });
 
 socket.on('mediaFolders', function (data) {
-    //console.log(data);
+    console.log(data);
     $('#media-folder-table').bootstrapTable('load', data);
 });
 
