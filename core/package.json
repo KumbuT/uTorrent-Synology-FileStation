@@ -11,7 +11,7 @@
   "dependencies": {
     "chokidar": "^1.6.1",
     "form-data": "^2.1.4",
-    "libnmap": "^0.4.14",
+    "libnmap": "^0.4.16",
     "redis": "^2.8.0",
     "request": "^2.88.0",
     "winston": "^3.1.0"
