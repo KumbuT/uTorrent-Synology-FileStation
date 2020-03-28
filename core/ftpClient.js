@@ -16,7 +16,7 @@ let ftpClient = {
                         'secure': config.synology.ftp.encryption,
                         'user': "admin",
                         'password': "Bh0gadi123",
-                    }
+                    };
                     var c = new client();
 
                     c.on('ready', function () {
@@ -29,7 +29,7 @@ let ftpClient = {
                     c.on('error', (err) => {
                         logger.log('error', `FTP: Connection to server ${config.secure.ipV4} failed with message ${err.toString()}`);
                         if (debug) console.log(err);
-                        reject(err)
+                        reject(err);
                     });
                     c.connect(ftpConfig);
                 }
@@ -39,7 +39,7 @@ let ftpClient = {
         });
 
     },
-    upload: async function (logger, file, debug) {
+    upload: function (logger, file, debug) {
         /**file is an object with the structure [{'filePath': string?value, 'destPath': string?value}]*/
         return new Promise((resolve, reject) => {
             try {
