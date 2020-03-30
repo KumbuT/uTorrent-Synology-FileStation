@@ -32,21 +32,21 @@ socket.on('torrentQueue', function (data) {
                     file.Priority = 'Yes';
                     break;
                 default:
-                    file.Priority = 'N/A'
-            };
+                    file.Priority = 'N/A';
+            }
 
             file.Downloaded = file.Downloaded + "(" + ((file.Downloaded / file.FileSize) * 100).toFixed(2) + '%)';
         });
         //add new torrents
         data.filter(torrent => !$('#torrent-table').bootstrapTable('getData').map(row => {
             return row.Hash;
-        }).includes(torrent.Hash)).map(torrent => $('#torrent-table').bootstrapTable('append', torrent))
+        }).includes(torrent.Hash)).map(torrent => $('#torrent-table').bootstrapTable('append', torrent));
 
         //remove deleted or completed torrents
         $('#torrent-table').bootstrapTable('getData').filter(torrent => !data.map(row => {
             return row.Hash;
         }).includes(torrent.Hash)).map(torrent => {
-            $('#torrent-table').bootstrapTable('removeByUniqueId', torrent.id)
+            $('#torrent-table').bootstrapTable('removeByUniqueId', torrent.id);
         });
 
         //update existing torrents
@@ -86,7 +86,7 @@ function operateFormatter(value, row, index) {
         '<a class="remove" href="javascript:void(0)" title="Remove">',
         '<i class="fa fa-trash"></i>',
         '</a>'
-    ].join('')
+    ].join('');
 }
 
 window.operateEvents = {
@@ -103,7 +103,7 @@ let emitDeleteFolderEvent = function (data) {
 
 socket.on('delete-folder', function (data) {
     console.log('received data' + data);
-})
+});
 
 
 socket.on('updateMediaFolderList', (row) => {

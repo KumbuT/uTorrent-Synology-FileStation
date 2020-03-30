@@ -126,7 +126,7 @@ var synoFileStation = {
                             })
                             .on('data', (data) => responseBody += data.toString())
                             .on('error', (e) => {
-                                reject(e)
+                                reject(e);
                             });
                     });
                 }, (data) => reject({
@@ -135,7 +135,7 @@ var synoFileStation = {
                         code: 1001,
                         message: data
                     }
-                }))
+                }));
             } catch (err) {
                 reject(err);
             }
@@ -174,10 +174,10 @@ var synoFileStation = {
                             }
                         });
                 });
-            }
+            };
             if (typeof sid === 'undefined') {
                 this.auth('login').then((sid) => {
-                    return this.getMaxVersionPromise('SYNO.FileStation.Info')
+                    return this.getMaxVersionPromise('SYNO.FileStation.Info');
                 }).then((maxV) => {
                     maxVersion = maxV;
                     getMaxV();
@@ -227,10 +227,10 @@ var synoFileStation = {
                             }
                         });
                 });
-            }
+            };
             if (typeof sid === 'undefined') {
                 this.auth('login').then((sid) => {
-                    return this.getMaxVersionPromise('SYNO.FileStation.List')
+                    return this.getMaxVersionPromise('SYNO.FileStation.List');
                 }).then((maxV) => {
                     maxVersion = maxV;
                     listFolders();
@@ -325,7 +325,7 @@ var synoFileStation = {
                     maxVersion = data;
                     processUpload();
                 }).catch((err) => {
-                    reject(err)
+                    reject(err);
                 });
             }
 
@@ -348,11 +348,11 @@ var synoFileStation = {
 
                 res.on('end', () => {
                     //console.log(responseBody);
-                    resolve(JSON.parse(responseBody).data[apiName].maxVersion)
+                    resolve(JSON.parse(responseBody).data[apiName].maxVersion);
                     //return 3; //Debug hadcoded max version
                 });
             }).on('error', (err) => {
-                reject(err)
+                reject(err);
             });
         });
     },
@@ -382,16 +382,16 @@ var synoFileStation = {
                     }
                     let responseBody = '';
                     res.on('data', (chunk) => {
-                            responseBody += chunk
+                            responseBody += chunk;
                         })
                         .on('end', () => {
-                            resolve(responseBody)
+                            resolve(responseBody);
                         })
                         .on('error', (err) => {
-                            reject(err)
+                            reject(err);
                         });
                 });
-            }
+            };
 
             if (typeof sid === 'undefined') {
                 this.auth('login').then((sid) => {

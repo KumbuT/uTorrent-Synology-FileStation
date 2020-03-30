@@ -262,7 +262,7 @@ let processTorrent = function (torrent, filesList) {
                                     logger.log('error', `FTP: ${err.toString()}`);
                                     emitEvent("Attempting to move file to local DLNA folder", false);
                                     helper.moveFileToDLNAFolder(fileName, queue[pos]);
-                                })
+                                });
                             }).catch((err) => {
                                 logger.log('error', err.toString());
                                 throw err;
@@ -550,7 +550,7 @@ module.exports.setIo = function (mySocket) {
         replayEvents(socket, "eventList", "hearYe");
         replayEvents(socket, "torrentList", "torrentQueue");
         replayEvents(socket, "fileList", "fileQueue");
-        readMediaFolder()
+        readMediaFolder();
         socket.on("delete-folder", function (rowObject) {
             //delete the folder and it's contents
             let row = JSON.parse(rowObject);
@@ -561,10 +561,10 @@ module.exports.setIo = function (mySocket) {
                         emitEvent(err.toString(), true);
                         return;
                     }
-                    for (file of files) {
+                    for (let file of files) {
                         if (fs.lstatSync(path.join(directory, file)).isDirectory()) {
                             continue;
-                        };
+                        }
                         fs.unlinkSync(path.join(directory, file));
                     }
 
