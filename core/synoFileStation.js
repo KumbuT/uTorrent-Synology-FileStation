@@ -287,17 +287,18 @@ var synoFileStation = {
                         } else {
                             res.resume();
                         }
-                        res.on('data', res => {
+                        res.on('end', res => {
                             try {
-                                if (res.statusCode >= 400) {
-                                    reject(res);
-                                } else {
-
-                                    res = JSON.parse(res);
-                                    if (res.success) {
-                                        resolve(res);
-                                    } else {
+                                if (res.hasOwnProperty("statuCode")) {
+                                    if (res.statusCode >= 400) {
                                         reject(res);
+                                    } else {
+                                        res = JSON.parse(res);
+                                        if (res.hasOwnProperty("success") && res.success) {
+                                            resolve(res);
+                                        } else {
+                                            reject(res);
+                                        }
                                     }
                                 }
                             } catch (err) {

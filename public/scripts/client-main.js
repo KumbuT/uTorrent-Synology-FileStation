@@ -91,14 +91,14 @@ function operateFormatter(value, row, index) {
 
 window.operateEvents = {
     'click .remove': function (e, value, row, index) {
-        let deleteConsent = confirm("Are you sure you want to delete?" + JSON.stringify($('#media-folder-table').bootstrapTable('getRowByUniqueId', index)));
+        let deleteConsent = confirm(`Are you sure you want to delete ${$('#media-folder-table').bootstrapTable('getRowByUniqueId', index+1).folderName}`);
         if (deleteConsent) {
             emitDeleteFolderEvent(row);
         }
     }
-}
+};
 let emitDeleteFolderEvent = function (data) {
-    socket.emit('delete-folder', JSON.stringify(data));7
+    socket.emit('delete-folder', JSON.stringify(data));
 };
 
 socket.on('delete-folder', function (data) {
@@ -178,11 +178,11 @@ let loadQueueTable = function () {
             },
             {
                 field: 'DownSpeed',
-                title: 'Download(Mbps)'
+                title: 'Download(MB/s)'
             },
             {
                 field: 'UpSpeed',
-                title: 'Upload(Mbps)'
+                title: 'Upload(MB/s)'
             }
         ],
         detailView: true,
@@ -270,14 +270,4 @@ let loadEventTable = function () {
         sortName: 'dateTime',
         sortOrder: 'desc'
     });
-};
-
-var compareJSON = function (obj1, obj2) {
-    let ret = {};
-    for (var i in obj2) {
-        if (!obj1.hasOwnProperty(i) || obj2[i] !== obj1[i]) {
-            ret[i] = obj2[i];
-        }
-    }
-    return ret;
 };

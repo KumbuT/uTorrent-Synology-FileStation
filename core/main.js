@@ -256,7 +256,8 @@ let processTorrent = function (torrent, filesList) {
                                 emitEvent(`Attempting to FTP upload file: ${file}`);
                                 helper.ftpFileUpload(queue[pos], dsPath + folderName + "/" + fileName, logger).then(() => {
                                     logger.log('info', `FTP: Uploaded file ${path.basename(queue[pos])}`);
-                                    emitEvent('FTP: Uploaded file ' + path.basename(queue[pos]), false);
+                                    emitEvent('FTP: Uploaded file ' + path.basename(queue[pos]) + ' successfully to ' + destPath , false);
+                                    helper.removeFileAfterUpload(queue[pos]);
                                 }).catch((err) => {
                                     logger.log('error', `FTP: ${err.toString()}`);
                                     emitEvent("Attempting to move file to local DLNA folder", false);
@@ -485,7 +486,6 @@ let helper = {
             'filePath': file,
             'destPath': destPath
         });
-
     },
     moveFileToDLNAFolder: function (videoName, srcPath) {
         let dirPath = 'C://Users//apteja//Videos//' + videoName.replace(/[\\\/*:\?"]/gi, "");
