@@ -14,8 +14,9 @@ let ftpClient = {
                         'host': config.synology.ipV4,
                         'port': config.synology.ftp.port,
                         'secure': config.synology.ftp.encryption,
-                        'user': "admin",
-                        'password': "Bh0gadi123",
+                        'user': config.synology.ftp.user,
+                        'password': config.synology.ftp.password,
+                        'keepalive': config.synology.ftp.keepalive
                     };
                     var c = new client();
 
