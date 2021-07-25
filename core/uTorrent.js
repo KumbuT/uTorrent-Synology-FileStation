@@ -18,12 +18,34 @@ var uTorrentClient = {
             };
             //call make request
             this.makeRequest(opts, function (err, res) {
-                if (err) { reject(err) }
-                else {
+                if (err) {
+                    reject(err);
+                } else {
                     let regex = new RegExp('<div id=(?:\'|")token(?:\'|")[^>]+>(.*)</div>');
                     let matches = regex.exec(res);
                     resolve(matches[1]);
-                };
+                }
+            });
+        });
+    },
+    getSettings: function (token) {
+        return new Promise((resolve, reject) => {
+            let opts = {
+                'uri': 'http://' + config.uTorrent.ipV4 + ':' + config.uTorrent.port + '/gui/',
+                'method': 'GET',
+                'qs': {
+                    token: token,
+                    action: 'getsettings'
+                },
+                'auth': {
+                    'user': config.uTorrent.userName,
+                    'pass': config.uTorrent.password,
+                    'sendImmediately': false
+                },
+                'jar': this.cookies
+            };
+            this.makeRequest(opts, (err, res) => {
+                err ? reject(err) : resolve(res);
             });
         });
     },
@@ -49,7 +71,7 @@ var uTorrentClient = {
         });
 
     },
-    listFilesForTorrent: function (token,hash) {
+    listFilesForTorrent: function (token, hash) {
         return new Promise((resolve, reject) => {
             let opts = {
                 'uri': 'http://' + config.uTorrent.ipV4 + ':' + config.uTorrent.port + '/gui/',

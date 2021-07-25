@@ -176,18 +176,18 @@ const logger = winston.createLogger({
 // // });
 
 
-// let mediainfo = require('./core/mediaInfo.js');
-// try {
-//     console.log(process.argv[2]);
-//     mediainfo.getMovieByKeyword(process.argv[2]).then((fileName) => {
-//         console.log(fileName);
-//     }).catch((err) => {
-//         console.error(err);
-//     });
+let mediainfo = require('./mediaInfo');
+try {
+    console.log(process.argv[2]);
+    mediainfo.getMovieByKeyword(process.argv[2] ? process.argv[2]: "Terminator [1984]").then((fileName) => {
+        console.log(fileName);
+    }).catch((err) => {
+        console.error(err);
+    });
 
-// } catch (e) {
-//     console.error(e);
-// }
+} catch (e) {
+    console.error(e);
+}
 
 
 // setInterval(emitTorrentQueue, 5000);
@@ -214,17 +214,23 @@ const logger = winston.createLogger({
 //     console.error("failure");
 // });
 
-let file2 = {
-        'filePath': "C:\\Users\\apteja\\Videos\\17 Again (2009) [1080p]\\17.Again.(2009)[1080p].mp4",
-        'destPath': '/video/Movies/17 Again (2009) [1080p]/17.Again.(2009)[1080p].mp4'
-    },
-    file1 = {
-        'filePath': "C:\Users\\apteja\\Videos\\17 Again (2009) [1080p]\\17.Again.(2009)[1080p].srt",
-        'destPath': '/video/Movies/17 Again (2009) [1080p]/17.Again.(2009)[1080p].srt'
-    };
-
-Promise.all([FTP.upload(logger, file1, true),FTP.upload(logger, file2, true)]).then(() => {
-    console.log("Uploaded!");
-}).catch((err) => {
-    console.log(err.toString());
-});
+// let file2 = {
+//         'filePath': "C:\\Users\\apteja\\Videos\\17 Again (2009) [1080p]\\17.Again.(2009)[1080p].mp4",
+//         'destPath': '/video/Movies/17 Again (2009) [1080p]/17.Again.(2009)[1080p].mp4'
+//     },
+//     file1 = {
+//         'filePath': "C:\Users\\apteja\\Videos\\17 Again (2009) [1080p]\\17.Again.(2009)[1080p].srt",
+//         'destPath': '/video/Movies/17 Again (2009) [1080p]/17.Again.(2009)[1080p].srt'
+//     };
+// FTP.connect(logger, true).then((c) => {
+//     console.log(`Connected! ${c}`);
+// }, (err) => {
+//     console.error(err);
+// }).catch((err) => {
+//     console.error(err);
+// });
+// Promise.all([FTP.upload(logger, file1, true), FTP.upload(logger, file2, true)]).then(() => {
+//     console.log("Uploaded!");
+// }).catch((err) => {
+//     console.log(err.toString());
+// });

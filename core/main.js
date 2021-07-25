@@ -8,6 +8,9 @@ var config = require('./config.js');
 var redisDb = require('./cache.js');
 var FTP = require('./ftpClient.js');
 
+
+var uTorrentBuildNum = 0; //default - invalid state
+
 /**
  * Instantiate Logger
  */
@@ -97,8 +100,8 @@ redisDb.create().then(
             });
         });
     }).catch((err) => {
-    logger.debug(err);
-});
+        logger.debug(err);
+    });
 
 
 
@@ -169,9 +172,20 @@ mediaFolderWatcher.on("add", filePath => {
 
 let UTorrentCallback = function () {
     uTorrentClient.login().then((token) => {
+        if (uTorrentBuildNum == 0) {
+            uTorrentClient.getSettings(token).then((status) => {
+                // console.log(status);
+                status = JSON.parse(status);
+                uTorrentBuildNum = parseInt(status.build);
+            }).catch((err) => {
+                throw new Error(err);
+            });
+        }
         emitUtStatus([{
-            online: 'Online'
+            online: 'Online',
+            build: uTorrentBuildNum
         }]);
+
         uTorrentClient.listTorrents(token).then((res) => {
             torrentQueue = JSON.parse(res);
             torrentQueue.torrents.map((cur, index, torrents) => {
@@ -203,13 +217,13 @@ let UTorrentCallback = function () {
                 }
             });
         }, (err) => {
-            logger.log('info', 'uTorrent could not be reached because: %s', err);
-            emitEvent("uTorrent could not be reached because " + err.message, true);
+            logger.log('info', 'uTorrent could not be reached because: %s', err ? err : "of unknown issues.");
+            emitEvent("uTorrent could not be reached because " + err ? err.message : "of unknown issues.", true);
         });
     }, (err) => {
-        logger.log('info', 'uTorrent could not be reached because: %s', err);
+        logger.log('info', 'uTorrent could not be reached because: %s', err ? err : "of unknown issues.");
         if (err === "uTorrent API returned status code : 400") {
-            emitEvent("uTorrent could not be reached because " + err, true);
+            emitEvent(`uTorrent could not be reached because ${err ? err : "of unknown issues."}`, true);
         }
         emitUtStatus([{
             online: 'Offline'
@@ -227,7 +241,7 @@ let processTorrent = function (torrent, filesList) {
     try {
         filesList.files[1].map((file) => {
             if (file[3] > 0) {
-                let dsPath = helper.resolveFileTypeToDsPath(file[0]);
+                let dsPath = helper.resolveFileTypeToDsPath(file[0], torrent[11]);
                 if (typeof dsPath === 'undefined') {
                     return;
                 }
@@ -238,13 +252,13 @@ let processTorrent = function (torrent, filesList) {
                     logger.log('error', 'Couldn\'t find file %s in local queue', file[0]);
                     return;
                 }
-                require('./mediaInfo.js').getMovieByKeyword(torrent[2])
+                require('./mediaInfo.js').getMovieByKeyword(torrent[2], torrent[11], file[0])
                     .then((fileName) => {
                         emitEvent("File name will be " + fileName, false);
                         logger.log('info', 'File will be named: %s', fileName);
                         //path.relative(config.watchPath, queue[pos]).replace(/\\/g, '/')
                         let folderName = fileName; //path.basename(queue[pos], path.extname(queue[pos]));
-                        fileName = fileName + path.extname(queue[pos]); 
+                        fileName = fileName + path.extname(queue[pos]);
                         ds.uploadFile(queue[pos], dsPath + folderName + "/" + fileName, logger)
                             .then((res) => {
                                 emitEvent('Uploaded file ' + file[0], false);
@@ -254,9 +268,12 @@ let processTorrent = function (torrent, filesList) {
                                 logger.log('error', 'Failed to upload file %s with message ', file, err);
                                 emitEvent('Failed to upload file:' + file + 'with message' + JSON.stringify(err), true);
                                 emitEvent(`Attempting to FTP upload file: ${file}`);
+                                if (torrent[11] && torrent[11].toLowerCase() == "tv") {
+                                    folderName = torrent[2];
+                                }
                                 helper.ftpFileUpload(queue[pos], dsPath + folderName + "/" + fileName, logger).then(() => {
                                     logger.log('info', `FTP: Uploaded file ${path.basename(queue[pos])}`);
-                                    emitEvent('FTP: Uploaded file ' + path.basename(queue[pos]) + ' successfully to ' + destPath , false);
+                                    emitEvent('FTP: Uploaded file ' + path.basename(queue[pos]) + ' successfully to ' + dsPath + folderName, false);
                                     helper.removeFileAfterUpload(queue[pos]);
                                 }).catch((err) => {
                                     logger.log('error', `FTP: ${err.toString()}`);
@@ -402,12 +419,6 @@ let replayEvents = (socket, listName, eventName) => {
             logger.log('error', err);
         } else {
             var list = reply;
-            // if (reply.length > 20) {
-            //     for (i = 0; i < 20; i++) {
-            //         io.sockets.in(socket.id).emit(eventName, JSON.parse(list[list.length - i + 1]));
-            //     }
-            // } else {
-            console.log(list);
             list.forEach(function (data) {
                 //console.info(`Emitting to socket: ${socket.id} -data ${data}`);
                 io.sockets.in(socket.id).emit(eventName, JSON.parse(data));
@@ -416,9 +427,6 @@ let replayEvents = (socket, listName, eventName) => {
         }
     });
 };
-
-
-
 
 
 /**
@@ -469,12 +477,17 @@ let helper = {
         }
         return statusMsg.join();
     },
-    resolveFileTypeToDsPath: function (filePath) {
+    resolveFileTypeToDsPath: function (filePath, labels) {
         let video = ['.mp4', '.mkv', '.mpeg', '.mov', '.avi', '.srt'];
         let audio = ['.mp3', '.flac', '.m4a'];
         let fileProp = path.parse(filePath);
         if (video.includes(fileProp.ext)) {
-            return '/video/Movies/';
+            if (labels && labels.toLowerCase() == "tv") {
+                return '/video/TV/';
+            } else {
+                return '/video/Movies/';
+            }
+
         }
         if (audio.includes(fileProp.ext)) {
             return '/music/';
@@ -482,10 +495,11 @@ let helper = {
         return undefined;
     },
     ftpFileUpload: function (file, destPath, logger) {
+        FTP.retry += 1;
         return FTP.upload(logger, {
             'filePath': file,
             'destPath': destPath
-        });
+        }, true);
     },
     moveFileToDLNAFolder: function (videoName, srcPath) {
         let dirPath = 'C://Users//apteja//Videos//' + videoName.replace(/[\\\/*:\?"]/gi, "");

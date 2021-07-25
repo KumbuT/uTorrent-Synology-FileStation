@@ -72,12 +72,12 @@ body {
  */
 
 .main {
-  padding: 20px;
+  padding: 5em;
 }
 @media (min-width: 768px) {
   .main {
-    padding-right: 40px;
-    padding-left: 40px;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 }
 .main .page-header {
@@ -106,4 +106,50 @@ body {
 
 .bottom-buffer{
   margin-bottom: 20px;
+}
+
+div.image-item {
+  vertical-align: top;
+  display: inline-block;
+  text-align: center;
+  margin: 2em;
+}
+
+.caption {
+  display: block;
+}
+
+.jumbotron1 {
+  color:  white;
+  padding: 1em;
+}
+
+td.details-control {
+  background: url('../img/expand-collapse-1809145-1634242.png') no-repeat center center;
+  background-size: 16px 16px;
+  cursor: pointer;
+}
+tr.shown td.details-control {
+  background: url('../img/Arrow\ collapse.png') no-repeat center center;
+  background-size: 16px 16px;
+}
+
+img.cast{
+  height: 60px;
+  width: 60px;
+  background-color: grey;
+  background-size: cover;
+  border-radius: 50%;
+}
+
+
+table.dataTable thead th {
+  border-bottom: 0;
+}
+table.dataTable tfoot th {
+  border-top: 0;
+}
+
+table.dataTable.no-footer {
+  border-bottom: 0;
 }

@@ -11,7 +11,8 @@ var socket_io = require('socket.io');
 
 //define routes
 var index = require('./routes/index');
-
+var movies = require('./routes/movies');
+var movieinfo = require('./routes/movieinfo');
 
 var app = express();
 
@@ -40,7 +41,8 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', index);
-
+app.use('/movies',movies);
+app.use('/movieinfo', movieinfo);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
