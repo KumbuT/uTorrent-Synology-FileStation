@@ -1,4 +1,3 @@
-"use strict";
 const redis = require('redis');
 const config = require('./config.js');
 
@@ -37,7 +36,7 @@ let redisClient = {
                 });
             } catch (err) {
                 reject(err);
-            };
+            }
         });
 
     }

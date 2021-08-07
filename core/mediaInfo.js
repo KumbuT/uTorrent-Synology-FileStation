@@ -51,14 +51,14 @@ var movieInfo = {
                         responseBody = JSON.parse(responseBody);
 
                         if (mediaType && mediaType.toLowerCase() == "tv" && responseBody.results.length > 0) {
-                            let name = responseBody.results[0].name;
+                            let name = responseBody.results[0].hasOwnProperty('name') ? responseBody.results[0].name : fileName;
                             tvFileName = (name + " " + (seasonAndEpisode.length > 0 ? seasonAndEpisode : "") + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimRight();
                             resolve(tvFileName);
                         }
 
                         if (responseBody.results.length > 0 || mediaType || mediaType.toLowerCase() != "tv") {
                             let title = responseBody.results[0].hasOwnProperty('title') ? responseBody.results[0].title : torrentName;
-                            let year = responseBody.results[0].hasOwnProptery('release_date') ? responseBody.results[0].release_date.toString().match(/\d{4}/) : '';
+                            let year = responseBody.results[0].hasOwnProperty('release_date') ? responseBody.results[0].release_date.toString().match(/\d{4}/) : '';
                             movieFileName = (title + "[" + year + "]" + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimRight();
                             resolve(movieFileName);
                         } else {
