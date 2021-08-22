@@ -7,6 +7,7 @@ var uTorrentClient = require('./uTorrent.js');
 var config = require('./config.js');
 var redisDb = require('./cache.js');
 var FTP = require('./ftpClient.js');
+const { emit } = require('process');
 
 
 var uTorrentBuildNum = 0; //default - invalid state
@@ -168,7 +169,36 @@ mediaFolderWatcher.on("add", filePath => {
     readMediaFolder();
 });
 
+/**
+ * 
+ * @param {*} torrent 
+ * @param {*} filesList 
+ */
 
+ let getSynoFSInfo =  function(){
+    ds.getInfo(logger).then((res) => {
+        //logger.log('info', res.data.hostname + " is online.");
+        let synoStatus = [{
+            status: "Online",
+            hostname:  res.data.hasOwnProperty("hostname") ? res.data.hostname: "Unknown Host"
+        }];
+        emitSynoStatus(synoStatus);
+    }, (err) => {
+        let synoStatus = [{
+            status: "Offline",
+            hostname:  ""
+        }];
+        logger.log('info', "Diskstation is offline");
+        emitSynoStatus(synoStatus);
+    }).catch((err) => {
+        logger.log('error', JSON.stringify(err));
+        let synoStatus = [{
+            status: "Offline",
+            hostname:  ""
+        }];
+        emitSynoStatus(synoStatus);
+    });
+};
 
 let UTorrentCallback = function () {
     uTorrentClient.login().then((token) => {
@@ -231,12 +261,18 @@ let UTorrentCallback = function () {
     });
 };
 
-
+/**
+ * All Timers
+ */
+let synoHeartBeat =  setInterval(getSynoFSInfo, 10000);
 let torrentCheckerTimer = setInterval(UTorrentCallback, 1000);
 
 /**
  * processing torrent after completion of download of a torrent
+ * @param {*} torrent 
+ * @param {*} filesList 
  */
+
 let processTorrent = function (torrent, filesList) {
     try {
         filesList.files[1].map((file) => {
@@ -282,10 +318,18 @@ let processTorrent = function (torrent, filesList) {
                                 });
                             }).catch((err) => {
                                 logger.log('error', err.toString());
-                                throw err;
+                                helper.ftpFileUpload(queue[pos], dsPath + folderName + "/" + fileName, logger).then(() => {
+                                    logger.log('info', `FTP: Uploaded file ${path.basename(queue[pos])}`);
+                                    emitEvent('FTP: Uploaded file ' + path.basename(queue[pos]) + ' successfully to ' + dsPath + folderName, false);
+                                    helper.removeFileAfterUpload(queue[pos]);
+                                }).catch((err) => {
+                                    logger.log('error', `FTP: ${err.toString()}`);
+                                    emitEvent("Attempting to move file to local DLNA folder", false);
+                                    helper.moveFileToDLNAFolder(fileName, queue[pos]);
+                                });
                             });
                     }).catch((err) => {
-                        logger.log('error', err);
+                        logger.log('error', `Error at getMovieByKeyword() ${err}`);
                         emitEvent('Error' + err);
                     });
             }
@@ -300,6 +344,9 @@ let processTorrent = function (torrent, filesList) {
  * All Socket Emit Events to follow
  */
 
+let emitSynoStatus =  function(status){
+        io.emit('synostatus', status);
+};
 
 let emitMediaFolders = function (mediaFoldersList) {
     let mediaFoldersJSON = [];

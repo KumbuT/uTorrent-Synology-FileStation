@@ -12,6 +12,7 @@ $().ready(function () {
     loadEventTable();
     loadMediaFolderTable();
     loadUtStats();
+    loadDSStats();
     loadMoviesTable();
 });
 
@@ -126,7 +127,9 @@ socket.on('uTorrentHealth', function (data) {
     $('#uTStats').bootstrapTable('load', data);
 });
 
-
+socket.on('synostatus', function(data){
+    $('#dsStats').bootstrapTable('load', data);
+});
 
 function operateFormatter(value, row, index) {
     return [
@@ -187,10 +190,24 @@ let loadUtStats = function () {
         smartDisplay: true,
         columns: [{
             field: 'online',
-            title: 'Online',
+            title: 'Status',
         }, {
             field: 'build',
             title: 'Build'
+        }]
+    });
+};
+
+let loadDSStats = function () {
+    $('#dsStats').bootstrapTable({
+        cardView: true,
+        smartDisplay: true,
+        columns: [{
+            field: 'status',
+            title: 'Status',
+        }, {
+            field: 'hostname',
+            title: 'Host Name'
         }]
     });
 };

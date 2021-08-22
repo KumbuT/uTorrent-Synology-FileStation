@@ -122,16 +122,26 @@ const logger = winston.createLogger({
 //     console.log(err);
 // });
 
-let filPat = 'C:\\Users\\apteja\\Videos\\Deception Pass\\Deception Pass 2014.mp4';
-let dstPat = '/video/Movies/' + path.dirname(filPat).split(path.sep).pop().replace(/\\/g, '/');
+// let filPat = 'C:\\Users\\apteja\\Videos\\Deception Pass\\Deception Pass 2014.mp4';
+// let dstPat = '/video/Movies/' + path.dirname(filPat).split(path.sep).pop().replace(/\\/g, '/');
 
-ds.uploadFile(filPat, dstPat).then((res) => {
-    console.log('Successfully uploaded file');
+// ds.uploadFile(filPat, dstPat).then((res) => {
+//     console.log('Successfully uploaded file');
+// }, (err) => {
+//     console.error(`Failed to upload file: ${filPat} with message ${JSON.stringify(err)}`);
+//     console.error(`Failed to upload file: ${filPat} with message ${err.toString()}`);
+// }).catch((err) => {
+//     console.error(err);
+// });
+
+
+ds.getInfo(logger).then((res) => {
+    console.log(res);
+    logger.log('info', res);
 }, (err) => {
-    console.error(`Failed to upload file: ${filPat} with message ${JSON.stringify(err)}`);
-    console.error(`Failed to upload file: ${filPat} with message ${err.toString()}`);
+    logger.log('error',err);
 }).catch((err) => {
-    console.error(err);
+    logger.log('error',err);
 });
 
 // // netScan.getInterfaces().then(netScan.discover()).then((rep) => {
