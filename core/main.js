@@ -7,7 +7,10 @@ var uTorrentClient = require('./uTorrent.js');
 var config = require('./config.js');
 var redisDb = require('./cache.js');
 var FTP = require('./ftpClient.js');
-const { emit } = require('process');
+const {
+    emit
+} = require('process');
+const { SSL_OP_EPHEMERAL_RSA } = require('constants');
 
 
 var uTorrentBuildNum = 0; //default - invalid state
@@ -56,6 +59,7 @@ let torrentQueue = [];
 let queue = [];
 let myRedisClient;
 
+
 /**
  * cleanup
  */
@@ -101,11 +105,18 @@ redisDb.create().then(
             });
         });
     }).catch((err) => {
-        logger.debug(err);
-    });
+    logger.debug(err);
+});
 
-
-
+/**Check whether download location exists. See Config.watchPath */
+if (!fs.existsSync(config.watchPath)) {
+    try {
+        fs.mkdirSync(config.watchPath);
+    } catch (err) {
+        logger.log('error',`Could not create the download folder ${config.watchPath}. Please check the parameter 'watchPath' in ${fs.realpathSync('./core/config.js')}. \n Error Stack: \n \t ${err}`);
+        process.exit(1);
+    }
+}
 /**
  * Declare media file reader
  */
@@ -175,31 +186,35 @@ mediaFolderWatcher.on("add", filePath => {
  * @param {*} filesList 
  */
 
- let getSynoFSInfo =  function(){
+let getSynoFSInfo = function () {
     ds.getInfo(logger).then((res) => {
         //logger.log('info', res.data.hostname + " is online.");
         let synoStatus = [{
             status: "Online",
-            hostname:  res.data.hasOwnProperty("hostname") ? res.data.hostname: "Unknown Host"
+            hostname: res.data.hasOwnProperty("hostname") ? res.data.hostname : "Unknown Host"
         }];
         emitSynoStatus(synoStatus);
     }, (err) => {
         let synoStatus = [{
             status: "Offline",
-            hostname:  ""
+            hostname: ""
         }];
         logger.log('info', "Diskstation is offline");
+        clearInterval(synoHeartBeat);
+        synoHeartBeat = setInterval(getSynoFSInfo, Math.abs((interval += 1900) % (maxInterval) - maxInterval));
         emitSynoStatus(synoStatus);
     }).catch((err) => {
         logger.log('error', JSON.stringify(err));
         let synoStatus = [{
             status: "Offline",
-            hostname:  ""
+            hostname: ""
         }];
         emitSynoStatus(synoStatus);
     });
 };
 
+let maxInterval = 100000;
+let interval = 1000;
 let UTorrentCallback = function () {
     uTorrentClient.login().then((token) => {
         if (uTorrentBuildNum == 0) {
@@ -207,6 +222,8 @@ let UTorrentCallback = function () {
                 // console.log(status);
                 status = JSON.parse(status);
                 uTorrentBuildNum = parseInt(status.build);
+                clearInterval(torrentCheckerTimer);
+                torrentCheckerTimer = setInterval(UTorrentCallback, interval);
             }).catch((err) => {
                 throw new Error(err);
             });
@@ -251,6 +268,8 @@ let UTorrentCallback = function () {
             emitEvent("uTorrent could not be reached because " + err ? err.message : "of unknown issues.", true);
         });
     }, (err) => {
+        clearInterval(torrentCheckerTimer);
+        torrentCheckerTimer = setInterval(UTorrentCallback, Math.abs((interval += 1900) % (maxInterval) - maxInterval));
         logger.log('info', 'uTorrent could not be reached because: %s', err ? err : "of unknown issues.");
         if (err === "uTorrent API returned status code : 400") {
             emitEvent(`uTorrent could not be reached because ${err ? err : "of unknown issues."}`, true);
@@ -264,8 +283,8 @@ let UTorrentCallback = function () {
 /**
  * All Timers
  */
-let synoHeartBeat =  setInterval(getSynoFSInfo, 10000);
-let torrentCheckerTimer = setInterval(UTorrentCallback, 1000);
+let synoHeartBeat = setInterval(getSynoFSInfo, 10000);
+let torrentCheckerTimer = setInterval(UTorrentCallback, interval);
 
 /**
  * processing torrent after completion of download of a torrent
@@ -290,11 +309,12 @@ let processTorrent = function (torrent, filesList) {
                 }
                 require('./mediaInfo.js').getMovieByKeyword(torrent[2], torrent[11], file[0])
                     .then((fileName) => {
-                        emitEvent("File name will be " + fileName, false);
+                        emitEvent("File will be named " + fileName, false);
                         logger.log('info', 'File will be named: %s', fileName);
                         //path.relative(config.watchPath, queue[pos]).replace(/\\/g, '/')
                         let folderName = fileName; //path.basename(queue[pos], path.extname(queue[pos]));
                         fileName = fileName + path.extname(queue[pos]);
+                        emitEvent("Attempting to upload file " + fileName + " to destination " + dsPath + folderName, false);
                         ds.uploadFile(queue[pos], dsPath + folderName + "/" + fileName, logger)
                             .then((res) => {
                                 emitEvent('Uploaded file ' + file[0], false);
@@ -344,8 +364,8 @@ let processTorrent = function (torrent, filesList) {
  * All Socket Emit Events to follow
  */
 
-let emitSynoStatus =  function(status){
-        io.emit('synostatus', status);
+let emitSynoStatus = function (status) {
+    io.emit('synostatus', status);
 };
 
 let emitMediaFolders = function (mediaFoldersList) {

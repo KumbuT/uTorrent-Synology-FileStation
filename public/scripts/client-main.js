@@ -220,7 +220,7 @@ let loadMoviesTable = function () {
         fixedHeader: true,
         processing: true,
         serverSide: true,
-        lengthChange: false,
+        lengthChange: true,
         searchDelay: 1000,
         //stateSave: true,
         order: [

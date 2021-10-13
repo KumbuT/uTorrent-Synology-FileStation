@@ -9,10 +9,8 @@ const {
 } = require('request');
 
 var sid = "",
-    synotoken = "";
-var synoFileStation = {
-    "heartBeat": function () {},
-    "errorResolver": function (errorCode) {
+    synotoken = "",
+    errorResolver = function (errorCode) {
         errorCode = errorCode.toString();
         let errorList = {
             "100": "Unknown error",
@@ -77,8 +75,9 @@ var synoFileStation = {
             "1300": "Failed to compres files/folders",
             "1301": "Cannot create the archive beacause the given archive name is too long",
         };
-        return ((errorList.hasOwnProperty(errorCode)) ? errorList.errorCode.toString() : "Undefined");
-    },
+        return (errorList.hasOwnProperty(errorCode) ? errorList.errorCode : "Undefined");
+    };
+var synoFileStation = {
     "auth": function (method, logger) {
         return new Promise((resolve, reject) => {
             let maxVersion = 1;
@@ -130,7 +129,16 @@ var synoFileStation = {
                                 }
                                 resolve();
                             } else {
-                                reject(bodyJSON);
+                                if (bodyJSON.error.hasOwnProperty('code')) {
+                                    reject({
+                                        'success': false,
+                                        'error': {
+                                            'code': errorResolver(bodyJSON.error.code)
+                                        }
+                                    });
+                                } else {
+                                    reject(bodyJSON);
+                                }
                             }
 
                         });
@@ -215,9 +223,17 @@ var synoFileStation = {
                             if (bodyJSON.hasOwnProperty("success") && bodyJSON.success) {
                                 resolve(bodyJSON);
                             } else {
-                                reject(bodyJSON);
+                                if (bodyJSON.error.hasOwnProperty('code')) {
+                                    reject({
+                                        'success': false,
+                                        'error': {
+                                            'code': errorResolver(bodyJSON.error.code)
+                                        }
+                                    });
+                                } else {
+                                    reject(bodyJSON);
+                                }
                             }
-
                         });
 
                         res.on("error", (err) => {
@@ -235,7 +251,7 @@ var synoFileStation = {
                 }
             };
             if (sid === '') {
-                this.auth('login').then(() => {
+                this.auth('login', logger).then(() => {
                         return this.getMaxVersionPromise('SYNO.FileStation.Upload');
                     }).then((maxV) => {
                         maxVersion = maxV;
@@ -260,14 +276,13 @@ var synoFileStation = {
             let maxVersion = 2;
             let data = "";
             filePath = filePath.toString();
-            let processUpload = function () {
+            let processUpload = function (fsObj) {
                 try {
                     if (logger) {
                         logger.log('info', 'Uploading file %s to destination %s', filePath, destPath);
                     }
 
                     fs.accessSync(filePath, fs.constants.R_OK);
-
                     let form = new FormData();
                     form.append('create_parents', 'true');
                     form.append('overwrite', 'true');
@@ -309,7 +324,28 @@ var synoFileStation = {
                                 if (JSONBody.hasOwnProperty("success") && JSONBody.success) {
                                     resolve(JSONBody);
                                 } else {
-                                    reject(JSONBody);
+                                    if (bodyJSON.error.hasOwnProperty('code')) {
+                                        reject({
+                                            'success': false,
+                                            'error': {
+                                                'code': errorResolver(bodyJSON.error.code)
+                                            }
+                                        });
+                                    } else {
+                                        reject(bodyJSON);
+                                    }
+                                }
+
+                                if (fsObj) {
+                                    fsObj.auth('logout').then((res) => {
+                                        if (logger) {
+                                            logger.log('info', `Logged out of the session ${synotoken} for SID ${sid}`);
+                                        }
+                                    }, (err) => {
+                                        if (logger) logger.log('error', `There was an error logging out ${sid} with message - ${err.toString()}`);
+                                    }).catch((err) => {
+                                        if (logger) logger.log('error', `There was an error logging out ${sid} with message - ${err.toString()}`);
+                                    });
                                 }
                             }
                             console.log(body.toString());
@@ -324,7 +360,7 @@ var synoFileStation = {
                         return this.getMaxVersionPromise('SYNO.FileStation.Upload');
                     }).then((maxV) => {
                         maxVersion = maxV;
-                        processUpload(this.synotoken, this.sid);
+                        processUpload(this);
                     })
                     .catch((err) => {
                         reject(err);
