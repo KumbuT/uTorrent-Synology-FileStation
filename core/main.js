@@ -10,7 +10,9 @@ var FTP = require('./ftpClient.js');
 const {
     emit
 } = require('process');
-const { SSL_OP_EPHEMERAL_RSA } = require('constants');
+const {
+    SSL_OP_EPHEMERAL_RSA
+} = require('constants');
 
 
 var uTorrentBuildNum = 0; //default - invalid state
@@ -113,7 +115,7 @@ if (!fs.existsSync(config.watchPath)) {
     try {
         fs.mkdirSync(config.watchPath);
     } catch (err) {
-        logger.log('error',`Could not create the download folder ${config.watchPath}. Please check the parameter 'watchPath' in ${fs.realpathSync('./core/config.js')}. \n Error Stack: \n \t ${err}`);
+        logger.log('error', `Could not create the download folder ${config.watchPath}. Please check the parameter 'watchPath' in ${fs.realpathSync('./core/config.js')}. \n Error Stack: \n \t ${err}`);
         process.exit(1);
     }
 }
@@ -187,7 +189,7 @@ mediaFolderWatcher.on("add", filePath => {
  */
 
 let getSynoFSInfo = function () {
-    ds.getInfo(logger).then((res) => {
+    ds.getInfo(true, logger).then((res) => {
         //logger.log('info', res.data.hostname + " is online.");
         let synoStatus = [{
             status: "Online",

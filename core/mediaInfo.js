@@ -28,6 +28,12 @@ var movieInfo = {
                 }
                 if (mediaType && fileName && mediaType.toLowerCase() == "tv") {
                     apiPath = encodeURI("/3/search/tv?include_adult=false&page=1&query=" + fileName + "&language=en-US&api_key=" + config.tmdb.apiKey);
+                    let re = /.S(?<season>\d{1,2})E(?<episode>\d{1,2})./;
+                    var matches = fileName.match(re);
+                    if (matches && matches.length > 0) {
+                        var season = matches.groups.season ? matches.groups.season : false;
+                        var episode = matches.groups.episode ? matches.groups.episode : false;
+                    }
                 } else {
                     apiPath = encodeURI("/3/search/movie?include_adult=false&page=1&query=" + torrentData.title + "&language=en-US&year=" + ((year > 0) ? year : '') + "&api_key=" + config.tmdb.apiKey);
                 }
@@ -48,21 +54,25 @@ var movieInfo = {
                     });
                     res.on("end", function () {
                         //console.log(body.toString());
-                        responseBody = JSON.parse(responseBody);
+                        try {
+                            responseBody = JSON.parse(responseBody);
 
-                        if (mediaType && mediaType.toLowerCase() == "tv" && responseBody.results.length > 0) {
-                            let name = responseBody.results[0].hasOwnProperty('name') ? responseBody.results[0].name : fileName;
-                            tvFileName = (name + " " + (seasonAndEpisode.length > 0 ? seasonAndEpisode : "") + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimRight();
-                            resolve(tvFileName);
-                        }
+                            if (mediaType && mediaType.toLowerCase() == "tv" && responseBody.results.length > 0) {
+                                let name = responseBody.results[0].hasOwnProperty('name') ? responseBody.results[0].name : fileName;
+                                tvFileName = (name + (season ? " S" + season : "") + (episode ? "E" + episode : " ") + (torrentData.resolution ? + "(" + torrentData.resolution + ")": "")).replace(/\s+/gm, " ").trimEnd();
+                                resolve(tvFileName);
+                            }
 
-                        if (responseBody.results.length > 0 || mediaType || mediaType.toLowerCase() != "tv") {
-                            let title = responseBody.results[0].hasOwnProperty('title') ? responseBody.results[0].title : torrentName;
-                            let year = responseBody.results[0].hasOwnProperty('release_date') ? responseBody.results[0].release_date.toString().match(/\d{4}/) : '';
-                            movieFileName = (title + "[" + year + "]" + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimRight();
-                            resolve(movieFileName);
-                        } else {
-                            (fileName && mediaType) ? resolve(fileName): resolve(torrentName);
+                            if (responseBody.results.length > 0 || mediaType || mediaType.toLowerCase() != "tv") {
+                                let title = responseBody.results[0].hasOwnProperty('title') ? responseBody.results[0].title : torrentName;
+                                let year = responseBody.results[0].hasOwnProperty('release_date') ? responseBody.results[0].release_date.toString().match(/\d{4}/) : '';
+                                movieFileName = (title + "[" + year + "]" + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimRight();
+                                resolve(movieFileName);
+                            } else {
+                                (fileName && mediaType) ? resolve(fileName): resolve(torrentName);
+                            }
+                        } catch (err) {
+                            reject(err);
                         }
 
                     });

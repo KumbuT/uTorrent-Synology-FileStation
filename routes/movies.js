@@ -23,6 +23,11 @@ let getMovies = function (req, res, next) {
 
     //add throw error if these query params are not present
     queryParam.limit = pageSize;
+
+    queryParam.minimum_rating = req.query.hasOwnProperty('rating') ? parseInt(req.query.rating) : parseInt('0');
+    queryParam.genre = req.query.hasOwnProperty('genre') ? req.query.genre.toString() : "all";
+
+    console.log(`${req.query.genre} \n ${req.query.rating}`);
     //queryParam.length = req.query.hasOwnProperty('length') ? parseInt(req.query.length) : 0 ;
     if (req.query.hasOwnProperty('search') && req.query.search.value.length > 0) {
       queryParam.query_term = req.query.search.value;

@@ -24,7 +24,7 @@
 </nav>
 <div class="container-fluid">
     <div class="row">
-        <div class="col-sm-1 col-md-1 sidebar">
+        <!-- <div class="col-sm-1 col-md-1 sidebar">
             <ul class="nav nav-sidebar">
                 <li class="active"><a href="#status">Status <span class="sr-only">(current)</span></a></li>
                 <li><a href="#movies-header">Movies</a></li>
@@ -32,7 +32,7 @@
                 <li><a href="#media-header">Media Folder</a></li>
                 <li><a href="#logs-header">Logs</a></li>
             </ul>
-        </div>
+        </div> -->
         <div class="col-sm-10 col-sm-offset-1 col-md-10 col-md-offset-1 main">
             <div class="col-sm-11 col-sm-offset-1 col-md-11 col-md-offset-1 main">
                 <div class="row bottom-buffer">
@@ -60,74 +60,63 @@
                 </div>
                 <div class="row bottom-buffer">
                     <h1 id="movies-header" class="page-header">Movies</h1>
-                    <div class="btn-toolbar" role="toolbar" aria-label="...">
-                        <div class="btn-group" role="group" aria-label="...">
-                            <div class="dropup">
-                                <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu2"
-                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Ratings
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
-                                    <li><a href="#">0</a></li>
-                                    <li><a href="#">1</a></li>
-                                    <li><a href="#">2</a></li>
-                                    <li><a href="#">3</a></li>
-                                    <li><a href="#">4</a></li>
-                                    <li><a href="#">5</a></li>
-                                    <li><a href="#">6</a></li>
-                                    <li><a href="#">7</a></li>
-                                    <li><a href="#">8</a></li>
-                                    <li><a href="#">9</a></li>
-                                    <li role="separator" class="divider"></li>
-                                    <li><a href="#">ALL</a></li>
-                                </ul>
-                            </div>
+                    <form class="form-inline">
+                        <div class="form-group">
+                            <label for="movie-rating">Rating</label>
+                            <select class="form-control" id="movieRating">
+                                <option selected value="0">>0</option>
+                                <option value="1">1+</option>
+                                <option value="2">2+</option>
+                                <option value="3">3+</option>
+                                <option value="4">4+</option>
+                                <option value="5">5+</option>
+                                <option value="6">6+</option>
+                                <option value="7">7+</option>
+                                <option value="8">8+</option>
+                                <option value="9">9+</option>
+                            </select>
                         </div>
-                        <div class="btn-group" role="group" aria-label="...">
-                            <div class="dropup">
-                                <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu2"
-                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Genre
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
-                                    <li><a href="#">Action</a></li>
-                                    <li><a href="#">Adventure</a></li>
-                                    <li><a href="#">Animation</a></li>
-                                    <li><a href="#">Biography</a></li>
-                                    <li><a href="#">Comedy</a></li>
-                                    <li><a href="#">Crime</a></li>
-                                    <li><a href="#">Documentary</a></li>
-                                    <li><a href="#">Drama</a></li>
-                                    <li><a href="#">Family</a></li>
-                                    <li><a href="#">Fantasy</a></li>
-                                    <li><a href="#">Film Noir</a></li>
-                                    <li><a href="#">History</a></li>
-                                    <li><a href="#">Horror</a></li>
-                                    <li><a href="#">Music</a></li>
-                                    <li><a href="#">Musical</a></li>
-                                    <li><a href="#">Mystery</a></li>
-                                    <li><a href="#">Romance</a></li>
-                                    <li><a href="#">Sci-Fi</a></li>
-                                    <li><a href="#">Short Film</a></li>
-                                    <li><a href="#">Sport</a></li>
-                                    <li><a href="#">Superhero</a></li>
-                                    <li><a href="#">Thriller</a></li>
-                                    <li><a href="#">War</a></li>
-                                    <li><a href="#">Western</a></li>
-                                    <li role="separator" class="divider"></li>
-                                    <li><a href="#">ALL</a></li>
-                                </ul>
-                            </div>
+                        <div class="form-group">
+                            <label for="movie-genre">Genre</label>
+                            <select class="form-control" id="movieGenre">
+                                <option selected value='all'>ALL</option>
+                                <option value='Action'>Action</option>
+                                <option value='Adult'>Adult</option>
+                                <option value='Adventure'>Adventure</option>
+                                <option value='Animation'>Animation</option>
+                                <option value='Biography'>Biography</option>
+                                <option value='Comedy'>Comedy</option>
+                                <option value='Crime'>Crime</option>
+                                <option value='Documentary'>Documentary</option>
+                                <option value='Drama'>Drama</option>
+                                <option value='Family'>Family</option>
+                                <option value='Fantasy'>Fantasy</option>
+                                <option value='Film Noir'>Film Noir</option>
+                                <option value='Game Show'>Game Show</option>
+                                <option value='History'>History</option>
+                                <option value='Horror'>Horror</option>
+                                <option value='Musical'>Musical</option>
+                                <option value='Music'>Music</option>
+                                <option value='Mystery'>Mystery</option>
+                                <option value='News'>News</option>
+                                <option value='Reality-TV'>Reality-TV</option>
+                                <option value='Romance'>Romance</option>
+                                <option value='Sci-Fi'>Sci-Fi</option>
+                                <option value='Short'>Short</option>
+                                <option value='Sport'>Sport</option>
+                                <option value='Talk-Show'>Talk-Show</option>
+                                <option value='Thriller'>Thriller</option>
+                                <option value='War'>War</option>
+                                <option value='Western'>Western</option>
+                            </select>
                         </div>
-                    </div>
-                    <br>
-                    <div class="table-responsive">
-                        <table id="movies-table" class="table table-striped">
-                            <!--Loaded with JS-->
-                        </table>
-                    </div>
+                        <br>
+                        <div class="table-responsive">
+                            <table id="movies-table" class="table table-striped" >
+                                <!--Loaded with JS-->
+                            </table>
+                        </div>
+                    </form>
                 </div>
                 <div class="row bottom-buffer">
                     <h1 id="torrents-header" class="page-header">Torrents</h1>

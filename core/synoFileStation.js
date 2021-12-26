@@ -185,7 +185,7 @@ var synoFileStation = {
             }
         });
     },
-    getInfo: function (logger) {
+    getInfo: function (forceLocal, logger) {
         return new Promise((resolve, reject) => {
             let maxVersion = 2;
             let myLogger;
@@ -196,7 +196,7 @@ var synoFileStation = {
                     }
                     var options = {
                         'method': 'GET',
-                        'hostname': config.synology.ipV4,
+                        'hostname': forceLocal? config.synology.localIpV4: config.synology.ipV4,
                         'port': 5001,
                         'path': '/webapi/entry.cgi?api=SYNO.FileStation.Info&version=2&method=get&SynoToken=' + synotoken + '&_sid=' + sid,
                         'headers': {

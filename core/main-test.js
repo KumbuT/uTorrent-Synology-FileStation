@@ -135,14 +135,14 @@ const logger = winston.createLogger({
 // });
 
 
-ds.getInfo(logger).then((res) => {
-    console.log(res);
-    logger.log('info', res);
-}, (err) => {
-    logger.log('error',err);
-}).catch((err) => {
-    logger.log('error',err);
-});
+// ds.getInfo(logger).then((res) => {
+//     console.log(res);
+//     logger.log('info', res);
+// }, (err) => {
+//     logger.log('error',err);
+// }).catch((err) => {
+//     logger.log('error',err);
+// });
 
 // // netScan.getInterfaces().then(netScan.discover()).then((rep) => {
 // //     //console.log(JSON.stringify(rep));
@@ -186,18 +186,18 @@ ds.getInfo(logger).then((res) => {
 // // });
 
 
-// let mediainfo = require('./mediaInfo');
-// try {
-//     console.log(process.argv[2]);
-//     mediainfo.getMovieByKeyword(process.argv[2] ? process.argv[2]: "Terminator [1984]").then((fileName) => {
-//         console.log(fileName);
-//     }).catch((err) => {
-//         console.error(err);
-//     });
+let mediainfo = require('./mediaInfo');
+try {
+    console.log(process.argv[2]);
+    mediainfo.getMovieByKeyword(process.argv[2] ? process.argv[2]: "Yellowstone", "tv", "Yellowstone.S01.E03.1080p.mp4").then((fileName) => {
+        console.log(fileName);
+    }).catch((err) => {
+        console.error(err);
+    });
 
-// } catch (e) {
-//     console.error(e);
-// }
+} catch (e) {
+    console.error(e);
+}
 
 
 // setInterval(emitTorrentQueue, 5000);

@@ -6,7 +6,8 @@ let torrentTable = {
 };
 
 
-$().ready(function () {
+let onLoadCallback = function () {
+
     loadQueueTable();
     loadFileTable();
     loadEventTable();
@@ -14,7 +15,40 @@ $().ready(function () {
     loadUtStats();
     loadDSStats();
     loadMoviesTable();
-});
+
+    /**Force a movie table refresh on change in ratings or genre */
+    let moviesTableRefresh = function () {
+
+        let minRating = $('#movieRating').val();
+        let genre = $('#movieGenre').val();
+        // $('#movies-table').bootstrapTable('destroy');
+        $('#movies-table').bootstrapTable('refresh', {
+            url: '/movies',
+            query: {
+                'rating': minRating,
+                'genre': genre
+            }
+        });
+    };
+    $("#movieGenre").on('change', function () {
+        moviesTableRefresh();
+    });
+
+    $("#movieRating").on('change', function () {
+        moviesTableRefresh();
+
+    });
+};
+
+
+if (
+    document.readyState === "complete" ||
+    (document.readyState !== "loading" && !document.documentElement.doScroll)
+) {
+    onLoadCallback();
+} else {
+    document.addEventListener("DOMContentLoaded", onLoadCallback);
+}
 
 /**
  * All socket opertions
@@ -127,7 +161,7 @@ socket.on('uTorrentHealth', function (data) {
     $('#uTStats').bootstrapTable('load', data);
 });
 
-socket.on('synostatus', function(data){
+socket.on('synostatus', function (data) {
     $('#dsStats').bootstrapTable('load', data);
 });
 
@@ -216,13 +250,17 @@ let loadDSStats = function () {
 let loadMoviesTable = function () {
     var table = $('#movies-table').DataTable({
         responsive: true,
+        cardView: false,
+        showFullscreen: true,
+        search: true,
+        showRefresh: true,
+        autoRefresh: false,
+        //reInit: false,
+        detailView: true,
         paging: true,
-        fixedHeader: true,
         processing: true,
         serverSide: true,
-        lengthChange: true,
         searchDelay: 1000,
-        //stateSave: true,
         order: [
             [4, 'desc']
         ],
