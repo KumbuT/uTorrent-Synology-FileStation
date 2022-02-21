@@ -1,6 +1,6 @@
 var config = require('./config.js');
 var http = require("https");
-//var ptt = require("parse-torrent-title");
+var ptt = require("parse-torrent-title");
 
 var movieInfo = {
     getMovieByKeyword: (torrentName, mediaType, fileName) => {
