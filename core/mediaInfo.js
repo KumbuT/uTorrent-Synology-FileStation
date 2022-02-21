@@ -1,6 +1,6 @@
 var config = require('./config.js');
 var http = require("https");
-var ptt = require("parse-torrent-title");
+//var ptt = require("parse-torrent-title");
 
 var movieInfo = {
     getMovieByKeyword: (torrentName, mediaType, fileName) => {
@@ -46,7 +46,7 @@ var movieInfo = {
                 };
                 var req = http.request(options, function (res) {
                     let responseBody = '';
-                    if (res.statusCode >= 400) {
+                    if (res.status_code >= 400) {
                         reject(res);
                     }
                     res.on("data", function (chunk) {
@@ -59,14 +59,14 @@ var movieInfo = {
 
                             if (mediaType && mediaType.toLowerCase() == "tv" && responseBody.results.length > 0) {
                                 let name = responseBody.results[0].hasOwnProperty('name') ? responseBody.results[0].name : fileName;
-                                tvFileName = (name + (season ? " S" + season : "") + (episode ? "E" + episode : " ") + (torrentData.resolution ? + "(" + torrentData.resolution + ")": "")).replace(/\s+/gm, " ").trimEnd();
+                                let tvFileName = (name + (season ? " S" + season : "") + (episode ? "E" + episode : " ") + (torrentData.resolution ? +"(" + torrentData.resolution + ")" : "")).replace(/\s+/gm, " ").trimEnd();
                                 resolve(tvFileName);
                             }
 
                             if (responseBody.results.length > 0 || mediaType || mediaType.toLowerCase() != "tv") {
                                 let title = responseBody.results[0].hasOwnProperty('title') ? responseBody.results[0].title : torrentName;
                                 let year = responseBody.results[0].hasOwnProperty('release_date') ? responseBody.results[0].release_date.toString().match(/\d{4}/) : '';
-                                movieFileName = (title + "[" + year + "]" + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimRight();
+                                movieFileName = (title + "[" + year + "]" + ((torrentData.resolution === undefined) ? '' : "(" + torrentData.resolution + ")")).replace(/\s+/gm, " ").trimEnd();
                                 resolve(movieFileName);
                             } else {
                                 (fileName && mediaType) ? resolve(fileName): resolve(torrentName);
